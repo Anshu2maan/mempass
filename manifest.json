@@ -6,8 +6,8 @@
   "start_url": "/mempass/",
   "scope": "/mempass/",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#764ba2",
+  "background_color": "#1a202c",
+  "theme_color": "#2d3748",
   "icons": [
     {"src": "/mempass/icons/icon-72.png", "sizes": "72x72", "type": "image/png"},
     {"src": "/mempass/icons/icon-96.png", "sizes": "96x96", "type": "image/png"},
@@ -19,4 +19,5 @@
     {"src": "/mempass/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
+
 
