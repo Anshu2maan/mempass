@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Content Security Policy - SIMPLIFIED -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        img-src 'self' data: blob: https:;
+        connect-src 'self';
+        font-src 'self' data: https://fonts.gstatic.com;
+        worker-src 'self' blob:;
+        frame-ancestors 'none';
+    ">
+    
+    <title>🔐 MemPass – Password Generator & Secure Vault</title>
+    <meta name="description" content="Generate secure passwords. Store them locally with PIN protection.">
+    <!-- Disable password manager suggestions for security inputs -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="form-type" content="other">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Third Party Libraries - CORRECT VERSIONS -->
+    <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+    <script src="https://unpkg.com/dexie@3.2.3/dist/dexie.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo Section -->
+        <div class="logo">
+            <h1>🔐 MemPass</h1>
+            <p class="tagline">Aapke Documents aur Password- Dono Safe!</p>
+        </div>
+        
+        <!-- Theme Toggle -->
+        <div class="theme-toggle" style="position: absolute; top: 20px; right: 20px;">
+            <button id="themeToggleBtn" style="background: none; border: none; font-size: 2rem; cursor: pointer; width: auto; padding: 5px 10px; margin: 0;" title="Toggle Dark/Light Mode">
+                🌓
+            </button>
+        </div>
+        
+        <!-- Generator Section -->
+        <div class="input-group">
+            <label for="masterPhrase">🎯 Master Phrase (remember this)</label>
+            <div class="password-container">
+                <input type="password" id="masterPhrase" placeholder="e.g., correct horse battery staple 42" autocomplete="off" data-form-type="other" spellcheck="false" aria-autocomplete="none">
+                <button type="button" class="toggle-password" id="toggleMasterPhrase">👁️</button>
+            </div>
+            <div class="strength-meter" id="masterStrength"><div class="strength-fill"></div></div>
+            <div class="strength-label" id="masterStrengthLabel">Enter a phrase</div>
+        </div>
+
+        <!-- Master Phrase Security Warning -->
+        <div class="security-warning" style="margin-bottom: 25px; background: rgba(254,226,226,0.6); border:1px solid #fed7d7; color:#c53030; padding:15px; border-radius:12px;">
+            ⚠️ <strong>Note:</strong> If you forget your Master Phrase you cannot recover your passwords. Do not share it.
+        </div>
+
+        <!-- Service Input -->
+        <div class="input-group">
+            <label for="serviceName">🌐 Service/Website Name</label>
+            <input type="text" id="serviceName" placeholder="e.g., gmail, facebook, bank" autocomplete="off" spellcheck="false">
+            <div class="search-suggestions" id="searchSuggestions"></div>
+        </div>
+
+        <!-- Options Row -->
+        <div class="options">
+            <div>
+                <label for="passwordLength">Password Length</label>
+                <select id="passwordLength">
+                    <option value="8">8 characters (Minimum)</option>
+                    <option value="12">12 characters (Recommended)</option>
+                    <option value="16" selected>16 characters (Strong)</option>
+                    <option value="20">20 characters (Maximum)</option>
+                    <option value="24">24 characters (Very Strong)</option>
+                </select>
+            </div>
+            <div>
+                <label for="version">Version (for password rotation)</label>
+                <div class="version-input">
+                    <input type="number" id="version" value="1" min="1" max="1000">
+                    <div class="version-btn" id="incrementVersionBtn">+1</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="options">
+            <button id="generatePasswordBtn">✨ Generate</button>
+            <button id="savePasswordBtn" style="background:linear-gradient(135deg,#48bb78 0%,#38a169 100%);">💾 Save</button>
+        </div>
+
+        <!-- Password Display -->
+        <div class="password-display" id="passwordDisplay" style="display:none;">
+            <div>
+                <div class="password-container">
+                    <div class="password" id="passwordOutput"></div>
+                    <button type="button" class="toggle-password" id="togglePasswordOutput">👁️</button>
+                </div>
+                <div class="strength-meter" id="strengthMeter"><div class="strength-fill" id="strengthFill"></div></div>
+                <div class="strength-label" id="strengthLabel"></div>
+                <button class="copy-btn" id="copyPasswordBtn">📋 Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <!-- Vault Section -->
+        <div class="storage-section" id="vaultSection">
+            <div class="storage-header">
+                <h2>🔒 Vault</h2>
+                <button id="setupPinBtn" style="background:linear-gradient(135deg,#ed8936 0%,#dd6b20 100%); padding:10px 20px; width:auto;">
+                    🔐 Set PIN
+                </button>
+            </div>
+
+            <!-- Locked Vault State -->
+                <div class="locked-vault" id="lockedVault">
+                <div class="lock-icon">🔒</div>
+                <h3>Locked</h3>
+                <p>Enter your 6-digit PIN to open the vault</p>
+                <button id="unlockVaultBtn" style="width:auto; padding:10px 30px;">🔓 Unlock</button>
+            </div>
+
+            <!-- Unlocked Vault State -->
+            <div id="unlockedVault" style="display:none;">
+                <!-- Tab Navigation -->
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button id="showPasswordsTab" style="background:#667eea; width:auto; flex:1; margin:0;">🔐 Passwords</button>
+                    <button id="showDocumentsTab" style="background:#718096; width:auto; flex:1; margin:0;">📁 Documents</button>
+                </div>
+
+                <!-- Password Vault Content -->
+                <div id="passwordVaultContent">
+                    <div class="stats" id="vaultStats">
+                        <div class="stat-item"><div class="stat-value" id="totalCount">0</div><div class="stat-label">Total Passwords</div></div>
+                        <div class="stat-item"><div class="stat-value" id="recentCount">0</div><div class="stat-label">Last 30 Days</div></div>
+                        <div class="stat-item"><div class="stat-value" id="duplicateCount">0</div><div class="stat-label">Duplicates</div></div>
+                    </div>
+                    
+                    <!-- Password Search and Sort -->
+                    <div style="display:flex; gap:10px; margin:15px 0;">
+                        <input type="text" id="searchPasswords" placeholder="Search passwords..." style="flex:2;">
+                        <select id="sortPasswords" style="flex:1;">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="service">Service Name</option>
+                            <option value="frequent">Most Used</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Password List -->
+                    <div id="savedPasswords" class="saved-passwords"></div>
+                    
+                    <!-- Export/Import Buttons -->
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button id="exportVaultBtn" style="background:#667eea; flex:1;">📤 Export Vault</button>
+                        <button id="importVaultBtn" style="background:#48bb78; flex:1;">📥 Import Vault</button>
+                    </div>
+                </div>
+
+                <!-- Documents Vault Content -->
+                <div id="documentsVaultContent" style="display:none;">
+                    <div class="documents-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h2>📁 Your Documents</h2>
+                        <button id="addDocumentBtn" style="background:linear-gradient(135deg,#48bb78 0%,#38a169 100%); padding:10px 20px;">+ Add Document</button>
+                    </div>
+                    
+                    <!-- Document Stats -->
+                    <div id="documentStats" class="stats" style="margin-bottom:15px;">
+                        <div class="stat-item"><span class="stat-value" id="docTotalCount">0</span> Total</div>
+                        <div class="stat-item"><span class="stat-value" id="docExpiringCount">0</span> Expiring Soon</div>
+                        <div class="stat-item"><span class="stat-value" id="docFavoritesCount">0</span> Favorites</div>
+                    </div>
+                    
+                    <!-- Document Search and Filter -->
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <input type="text" id="searchDocuments" placeholder="Search documents..." style="flex:2;">
+                        <select id="filterDocuments" style="flex:1;">
+                            <option value="all">All Types</option>
+                            <option value="aadhar">Aadhar Card</option>
+                            <option value="pan">PAN Card</option>
+                            <option value="voter">Voter ID</option>
+                            <option value="passport">Passport</option>
+                            <option value="driving">Driving License</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Documents Grid -->
+                    <div id="documentsGrid" class="documents-grid"></div>
+                    
+                    <!-- Export Documents Button -->
+                    <div style="margin-top:15px;">
+                        <button id="exportDocumentsBtn" style="background:#667eea; margin-right:8px;">📤 Export Documents</button>
+                        <button id="importDocumentsBtn" style="background:#48bb78;">📥 Import Documents</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PIN Modal -->
+        <div class="modal" id="pinModal">
+            <div class="modal-content">
+                <h2 id="pinModalTitle">Unlock</h2>
+                <p id="pinModalDescription">Enter your 6-digit PIN</p>
+                
+                <!-- PIN Attempts Warning -->
+                <div id="pinAttemptsWarning" style="color:#f56565; text-align:center; margin-bottom:10px; font-size:0.9rem;"></div>
+                
+                <!-- PIN Inputs -->
+                <div class="pin-inputs">
+                    <input type="password" id="pin1" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    <input type="password" id="pin2" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    <input type="password" id="pin3" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    <input type="password" id="pin4" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    <input type="password" id="pin5" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    <input type="password" id="pin6" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                </div>
+                
+                <!-- Status Messages -->
+                <div id="pinError" class="error"></div>
+                <div id="pinSuccess" class="success"></div>
+                
+                <!-- Action Buttons -->
+                <div class="modal-actions pin-actions">
+                    <button id="verifyPinBtn">Unlock</button>
+                    <button id="closePinModalBtn" style="background:#718096;">Close</button>
+                </div>
+                
+                <!-- Forgot PIN Link -->
+                <p style="margin-top:15px; text-align:center;">
+                    <a href="#" id="forgotPinLink" style="color:#f56565;">Forgot PIN? Reset vault</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Document Add Modal -->
+        <div class="modal" id="documentModal">
+            <div class="modal-content" style="max-width:600px; max-height:80vh; overflow-y:auto;">
+                <h2 id="documentModalTitle">Add New Document</h2>
+                
+                <!-- Document Type -->
+                <div class="input-group">
+                    <label for="documentType">Document Type</label>
+                    <select id="documentType">
+                        <option value="aadhar">🆔 Aadhar Card</option>
+                        <option value="pan">📄 PAN Card</option>
+                        <option value="voter">🗳️ Voter ID</option>
+                        <option value="passport">🛂 Passport</option>
+                        <option value="driving">🚗 Driving License</option>
+                        <option value="other" selected>📁 Other Document</option>
+                    </select>
+                </div>
+                
+                <!-- Document Title -->
+                <div class="input-group">
+                    <label for="documentTitle">Title / Name</label>
+                    <input type="text" id="documentTitle" placeholder="e.g., My Aadhar Card 2025">
+                </div>
+                
+                <!-- Dynamic Fields Container -->
+                <div id="documentFields"></div>
+                
+                <!-- File Upload -->
+                <div class="input-group">
+                    <label for="documentFiles">Upload files (images, PDF)</label>
+                    <input type="file" id="documentFiles" multiple accept="image/*,application/pdf">
+                    <small>Max 5 files. Follow size limits.</small>
+                </div>
+                
+                <!-- Favorite Checkbox -->
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="documentFavorite"> Mark as favorite
+                    </label>
+                </div>
+                
+                <!-- Modal Actions -->
+                <div class="modal-actions">
+                    <button id="saveDocumentBtn">💾 Save</button>
+                    <button id="closeDocumentModalBtn" style="background:#718096;">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document View Modal -->
+        <div class="modal" id="documentViewModal">
+            <div class="modal-content" style="max-width:700px;">
+                <div class="modal-header">
+                    <h2 id="viewDocumentTitle"></h2>
+                </div>
+                
+                <!-- Document Content -->
+                <div id="documentViewContent"></div>
+                
+                <!-- Modal Actions -->
+                <div class="modal-actions">
+                    <button id="closeDocumentViewBtn">Close</button>
+                    <button id="editDocumentBtn" style="background:#667eea;">Edit</button>
+                    <button id="deleteDocumentBtn" style="background:#f56565;">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Preview Modal -->
+        <div class="modal" id="filePreviewModal">
+            <div class="modal-content" style="max-width:800px;">
+                <div class="modal-header">
+                    <h2 id="filePreviewTitle">Preview</h2>
+                </div>
+                <div id="filePreviewContent" style="min-height:200px; max-height:70vh; overflow:auto; text-align:center;"></div>
+                <div class="modal-actions">
+                    <button id="downloadPreviewBtn" style="background:#48bb78;">⬇️ Download</button>
+                    <button id="sharePreviewBtn" style="background:#667eea;">🔗 Share</button>
+                    <button id="closeFilePreviewBtn" style="background:#718096;">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Edit Modal -->
+        <div class="modal" id="documentEditModal">
+            <div class="modal-content" style="max-width:600px; max-height:80vh; overflow-y:auto;">
+                <h2>Edit Document</h2>
+                
+                <!-- Edit Title -->
+                <div class="input-group">
+                    <label for="editDocumentTitle">Title</label>
+                    <input type="text" id="editDocumentTitle" placeholder="Document title">
+                </div>
+                
+                <!-- Edit Notes -->
+                <div class="input-group">
+                    <label for="editDocumentNotes">Notes</label>
+                    <textarea id="editDocumentNotes" placeholder="Add notes..."></textarea>
+                </div>
+                
+                <!-- Current Files List -->
+                <div class="input-group">
+                    <label>📎 Current Files</label>
+                    <div id="editDocumentFilesList" style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; padding:10px;"></div>
+                </div>
+                
+                <!-- Add More Files -->
+                <div class="input-group">
+                    <label for="editDocumentNewFiles">Add More Files</label>
+                    <input type="file" id="editDocumentNewFiles" multiple accept="image/*,application/pdf">
+                    <small>Optional: add new files to this document</small>
+                </div>
+                
+                <!-- Modal Actions -->
+                <div class="modal-actions">
+                    <button id="saveEditDocumentBtn" style="background:#48bb78;">💾 Save Changes</button>
+                    <button id="closeEditDocumentModalBtn" style="background:#718096;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer with Features -->
+        <footer>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Local First</h3>
+                    <p>All data stored locally - never leaves your device</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔐</div>
+                    <h3>PIN Protected</h3>
+                    <p>6-digit PIN with Argon2 encryption</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📁</div>
+                    <h3>Document Vault</h3>
+                    <p>Store encrypted documents & files</p>
+                </div>
+            </div>
+            <p style="margin-top:20px;">🔐 MemPass v2.3 - Your Offline Password Manager</p>
+        </footer>
+    </div>
+
+    <!-- ==================== SCRIPTS ==================== -->
+    
+    <!-- Core Files -->
+    <script src="constants.js"></script>
+    <script src="crypto.js"></script>
+    <script src="utils.js"></script>
+    <script src="password-generator.js"></script>
+    
+    <!-- Vault Classes -->
+    <script src="vault.js"></script>
+    <script src="document-vault.js"></script>
+    
+    <!-- UI Handlers -->
+    <script src="ui-handlers.js"></script>
+    
+    <!-- Main Initialization -->
+    <script src="main.js"></script>
+    
+    <!-- Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('✅ SW registered:', reg.scope))
+                    .catch(err => console.log('❌ SW failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
