@@ -3,7 +3,8 @@
   "short_name": "MemPass🔐",
   "version": "2.3.0",
   "description": "Secure offline password generator & vault",
-  "start_url": "/",
+  "start_url": "/mempass/",
+  "scope": "/mempass/",
   "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#764ba2",
@@ -17,5 +18,4 @@
     {"src": "/mempass/icons/icon-384.png", "sizes": "384x384", "type": "image/png"},
     {"src": "/mempass/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
-
 }
