@@ -1,6 +1,6 @@
 {
   "name": "MemPass - Apka Apna Vault",
-  "short_name": "MemPass🔐",
+  "short_name": "MemPass",
   "version": "2.3.0",
   "description": "Secure offline password generator & vault",
   "start_url": "/mempass/",
@@ -19,5 +19,6 @@
     {"src": "/mempass/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
+
 
 
