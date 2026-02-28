@@ -1,4 +1,4 @@
-// onboarding.js - Fully Crash-Proof & Updated Version (Fixed Feb 2025)
+// onboarding.js - Fully Crash-Proof, Positioning-Fixed & Updated (Feb 2026)
 const Onboarding = {
     steps: [
         { element: '.logo', title: 'Welcome to MemPass! 🔐', content: 'Your 100% offline, privacy-first password & document vault.', position: 'bottom' },
@@ -20,8 +20,8 @@ const Onboarding = {
 
     init() {
         if (localStorage.getItem('mempass_tour_seen') === 'true') return;
-        // Increased delay to ensure all UI elements (including conditional ones) are rendered
-        setTimeout(() => this.start(), 6000);
+        // Safe delay - most UI elements (including conditional PIN buttons) should be ready
+        setTimeout(() => this.start(), 6500);
     },
 
     start() {
@@ -49,24 +49,24 @@ const Onboarding = {
         if (step.element) {
             target = document.querySelector(step.element);
             if (!target) {
-                console.warn(`Tour skipped step ${index + 1}: Element missing → ${step.element}`);
-                return this.next(); // auto skip to avoid stuck tour
+                console.warn(`Tour step ${index + 1} skipped: Element not found → ${step.element}`);
+                return this.next();
             }
             this.highlightElement(target);
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
         }
 
-        // 1. Pehle tooltip banao
+        // Create tooltip first
         this.createTooltip(step, index);
 
-        // 2. Phir position set karo (tooltip ab exist karta hai)
-        if (target && this.tooltip) {
-            this.positionTooltip(step, target);
-        } else if (this.tooltip) {
-            this.positionCenteredTooltip(step);
-        } else {
-            console.warn(`Cannot position step ${index + 1}: tooltip not created`);
-        }
+        // Then position it (after scroll has had time to settle)
+        setTimeout(() => {
+            if (target && this.tooltip) {
+                this.positionTooltip(step, target);
+            } else if (this.tooltip) {
+                this.positionCenteredTooltip(step);
+            }
+        }, 350); // Wait for scroll animation + layout reflow
     },
 
     highlightElement(target) {
@@ -124,82 +124,85 @@ const Onboarding = {
     },
 
     positionTooltip(step, target) {
-        if (!target || !this.tooltip) {
-            console.warn('positionTooltip: missing target or tooltip');
-            return;
-        }
+        if (!target || !this.tooltip) return;
 
         try {
             const rect = target.getBoundingClientRect();
-            let tooltipRect = this.tooltip.getBoundingClientRect();
-            const scrollY = window.scrollY;
-            const scrollX = window.scrollX;
+            const tooltipRect = this.tooltip.getBoundingClientRect();
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
 
-            let top, left;
+            let top, left, transform = '';
 
             switch (step.position) {
                 case 'bottom':
-                    top = rect.bottom + scrollY + 16;
-                    left = rect.left + scrollX + (rect.width / 2);
-                    this.tooltip.style.transform = 'translateX(-50%)';
+                    top = rect.bottom + 20;
+                    left = rect.left + rect.width / 2;
+                    transform = 'translateX(-50%)';
                     break;
                 case 'top':
-                    top = rect.top + scrollY - (tooltipRect.height || 220) - 16;
-                    left = rect.left + scrollX + (rect.width / 2);
-                    this.tooltip.style.transform = 'translateX(-50%)';
+                    top = rect.top - tooltipRect.height - 20;
+                    left = rect.left + rect.width / 2;
+                    transform = 'translateX(-50%)';
                     break;
                 case 'right':
-                    top = rect.top + scrollY + (rect.height / 2);
-                    left = rect.right + scrollX + 16;
-                    this.tooltip.style.transform = 'translateY(-50%)';
+                    top = rect.top + rect.height / 2;
+                    left = rect.right + 20;
+                    transform = 'translateY(-50%)';
                     break;
                 case 'left':
-                    top = rect.top + scrollY + (rect.height / 2);
-                    left = rect.left + scrollX - (tooltipRect.width || 320) - 16;
-                    this.tooltip.style.transform = 'translateY(-50%)';
-                    break;
-                case 'centered':
-                    top = (window.innerHeight - (tooltipRect.height || 300)) / 2 + scrollY;
-                    left = (window.innerWidth - (tooltipRect.width || 360)) / 2 + scrollX;
-                    this.tooltip.style.transform = 'none';
+                    top = rect.top + rect.height / 2;
+                    left = rect.left - tooltipRect.width - 20;
+                    transform = 'translateY(-50%)';
                     break;
                 default:
-                    // fallback
                     this.positionCenteredTooltip(step);
                     return;
             }
 
-            this.tooltip.style.position = 'absolute';
+            // Fixed positioning prevents scroll issues
+            this.tooltip.style.position = 'fixed';
             this.tooltip.style.top = `${top}px`;
             this.tooltip.style.left = `${left}px`;
+            this.tooltip.style.transform = transform;
 
-            // Adjust if out of viewport
+            // Clamp to viewport (prevents going off-screen)
             requestAnimationFrame(() => {
                 if (!this.tooltip) return;
-                tooltipRect = this.tooltip.getBoundingClientRect();
-                if (tooltipRect.left < 10) this.tooltip.style.left = '10px';
-                if (tooltipRect.right > window.innerWidth - 10) {
-                    this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
+                const cr = this.tooltip.getBoundingClientRect();
+
+                // Horizontal
+                if (cr.left < 12) {
+                    this.tooltip.style.left = '12px';
+                    this.tooltip.style.transform = 'none';
                 }
-                if (tooltipRect.top < 10) this.tooltip.style.top = '10px';
+                if (cr.right > vw - 12) {
+                    this.tooltip.style.left = `${vw - cr.width - 12}px`;
+                    this.tooltip.style.transform = 'none';
+                }
+
+                // Vertical
+                if (cr.top < 12) {
+                    this.tooltip.style.top = '12px';
+                }
+                if (cr.bottom > vh - 12) {
+                    this.tooltip.style.top = `${vh - cr.height - 12}px`;
+                }
             });
-        } catch (error) {
-            console.warn('Tour positioning failed:', error);
-            if (this.tooltip) this.positionCenteredTooltip(step);
+        } catch (err) {
+            console.warn('Positioning error:', err);
+            this.positionCenteredTooltip(step);
         }
     },
 
     positionCenteredTooltip(step) {
-        if (!this.tooltip) {
-            console.warn('positionCenteredTooltip: tooltip missing');
-            return;
-        }
+        if (!this.tooltip) return;
 
         this.tooltip.style.position = 'fixed';
         this.tooltip.style.top = '50%';
         this.tooltip.style.left = '50%';
         this.tooltip.style.transform = 'translate(-50%, -50%)';
-        this.tooltip.style.maxWidth = '90%';
+        this.tooltip.style.maxWidth = '90vw';
         this.tooltip.style.maxHeight = '85vh';
         this.tooltip.style.overflowY = 'auto';
         this.tooltip.style.zIndex = '10001';
