@@ -1,115 +1,262 @@
-// onboarding.js - Simple, elegant onboarding tour for MemPass
-
+// onboarding.js - Comprehensive, accessible onboarding tour for MemPass
 const Onboarding = {
     steps: [
         {
             element: '.logo',
             title: 'Welcome to MemPass! 🔐',
-            content: 'Your privacy-focused, offline-first digital vault. Let\'s show you how it works in 3 simple steps.',
-            position: 'bottom'
+            content: 'Your 100% offline, privacy-first password & document vault. Everything stays on your device.',
+            position: 'bottom',
+            placement: 'centered' // special for logo
         },
         {
             element: '#masterPhrase',
-            title: '1. Master Phrase 🎯',
-            content: 'This is the only thing you need to remember. Your passwords are generated mathematically from this phrase.',
+            title: 'Your Master Phrase 🎯',
+            content: 'This is the **only secret** you need to remember. All passwords are generated from it – no cloud, no recovery needed.',
             position: 'bottom'
         },
         {
             element: '#serviceName',
-            title: '2. Service Name 🌐',
-            content: 'Enter the website or service name (like "Gmail" or "Facebook") to generate a unique password for it.',
+            title: 'Service / Website Name 🌐',
+            content: 'Type any service (gmail, netflix, bank, etc.) to get a unique, strong password every time.',
             position: 'bottom'
         },
         {
+            element: '#passwordLength, #version',
+            title: 'Customize Your Password',
+            content: 'Choose length (16 is strong & recommended) and version number for easy rotation when needed.',
+            position: 'right'
+        },
+        {
             element: '#generatePasswordBtn',
-            title: '3. Generate & Save ✨',
-            content: 'Click Generate to see your new password, then Save it to your secure, PIN-protected vault.',
+            title: 'Generate Secure Password ✨',
+            content: 'Click here → see your password instantly. Copy or save it to the vault.',
             position: 'top'
         },
         {
-            element: '#vaultSection',
-            title: 'The Secure Vault 🔒',
-            content: 'All your saved passwords and documents stay right here on your device, encrypted and safe.',
+            element: '#savePasswordBtn',
+            title: 'Save to Vault 🔒',
+            content: 'Save passwords securely. They’ll be encrypted with your 6-digit PIN.',
             position: 'top'
+        },
+        {
+            element: '#unlockVaultBtn, #setupPinBtn',
+            title: 'Unlock with PIN',
+            content: 'Set or enter your 6-digit PIN to access saved passwords & documents. Forgotten PIN? Use export backup.',
+            position: 'bottom'
+        },
+        {
+            element: '#showDocumentsTab',
+            title: 'Document Vault 📁',
+            content: 'Store Aadhaar, PAN, Passport, etc. Encrypted files, expiry alerts, search – all local.',
+            position: 'top'
+        },
+        {
+            element: '#themeToggleBtn',
+            title: 'Dark/Light Mode 🌓',
+            content: 'Toggle theme anytime. Your preference is saved.',
+            position: 'left'
+        },
+        {
+            element: null, // floating final step
+            title: 'You\'re All Set! 🚀',
+            content: 'Start generating & storing securely. Your data never leaves your device.<br><br>Enjoy MemPass!',
+            position: 'centered',
+            isFinal: true
         }
     ],
-    currentStep: 0,
+
+    currentStep: -1,
+    overlay: null,
+    tooltip: null,
+    highlighted: null,
 
     init() {
-        const hasSeenTour = localStorage.getItem('mempass_tour_seen');
-        if (!hasSeenTour) {
-            setTimeout(() => this.showStep(0), 1500);
-        }
+        if (localStorage.getItem('mempass_tour_seen') === 'true') return;
+
+        // Optional: only show if no vault setup yet
+        // if (localStorage.getItem('mempass_settings_v2')) return;
+
+        setTimeout(() => this.start(), 1200);
+    },
+
+    start() {
+        this.createOverlay();
+        this.showStep(0);
+    },
+
+    createOverlay() {
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'tour-overlay';
+        document.body.appendChild(this.overlay);
     },
 
     showStep(index) {
+        if (index < 0 || index >= this.steps.length) return this.finish();
+
         this.currentStep = index;
         const step = this.steps[index];
-        const target = document.querySelector(step.element);
-        if (!target) return;
 
-        this.removeExisting();
+        this.removeHighlight();
+        this.removeTooltip();
 
-        const overlay = document.createElement('div');
-        overlay.className = 'tour-overlay';
-        
-        const tooltip = document.createElement('div');
-        tooltip.className = `tour-tooltip tour-${step.position}`;
-        
-        tooltip.innerHTML = `
-            <h3>${step.title}</h3>
-            <p>${step.content}</p>
-            <div class="tour-actions">
-                <button class="tour-skip" onclick="Onboarding.skip()">Skip</button>
-                <button class="tour-next" onclick="Onboarding.next()">
-                    ${index === this.steps.length - 1 ? 'Finish' : 'Next'}
-                </button>
-            </div>
-            <div class="tour-progress">${index + 1} of ${this.steps.length}</div>
-        `;
+        if (step.element) {
+            const target = document.querySelector(step.element);
+            if (!target) {
+                // Element nahi mila → next step pe chale jao
+                return this.next();
+            }
 
-        document.body.appendChild(overlay);
-        document.body.appendChild(tooltip);
-
-        const rect = target.getBoundingClientRect();
-        const scrollY = window.scrollY;
-
-        if (step.position === 'bottom') {
-            tooltip.style.top = `${rect.bottom + scrollY + 15}px`;
-            tooltip.style.left = `${rect.left + (rect.width / 2)}px`;
-            tooltip.style.transform = 'translateX(-50%)';
-        } else if (step.position === 'top') {
-            tooltip.style.top = `${rect.top + scrollY - tooltip.offsetHeight - 15}px`;
-            tooltip.style.left = `${rect.left + (rect.width / 2)}px`;
-            tooltip.style.transform = 'translateX(-50%)';
-            // Adjust if height is not yet known
-            setTimeout(() => {
-                tooltip.style.top = `${rect.top + scrollY - tooltip.offsetHeight - 15}px`;
-            }, 0);
+            this.highlightElement(target);
+            this.positionTooltip(step, target);
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // Floating centered tooltip (last step)
+            this.positionCenteredTooltip(step);
         }
 
+        this.createTooltip(step, index);
+    },
+
+    highlightElement(target) {
         target.classList.add('tour-highlight');
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        this.highlighted = target;
+    },
+
+    removeHighlight() {
+        if (this.highlighted) {
+            this.highlighted.classList.remove('tour-highlight');
+            this.highlighted = null;
+        }
+    },
+
+    createTooltip(step, index) {
+        this.tooltip = document.createElement('div');
+        this.tooltip.className = `tour-tooltip tour-${step.position}`;
+        this.tooltip.setAttribute('role', 'dialog');
+        this.tooltip.setAttribute('aria-labelledby', 'tour-title');
+        this.tooltip.setAttribute('tabindex', '-1');
+
+        const isLast = index === this.steps.length - 1;
+
+        this.tooltip.innerHTML = `
+            <div class="tour-header">
+                <h3 id="tour-title">${step.title}</h3>
+                <button class="tour-close" aria-label="Close tour" onclick="Onboarding.finish()">×</button>
+            </div>
+            <div class="tour-content">${step.content}</div>
+            <div class="tour-footer">
+                <div class="tour-progress">
+                    ${Array(this.steps.length).fill().map((_, i) => 
+                        `<span class="${i === index ? 'active' : ''}"></span>`
+                    ).join('')}
+                </div>
+                <div class="tour-actions">
+                    ${index > 0 ? '<button class="tour-btn tour-prev" onclick="Onboarding.prev()">Previous</button>' : ''}
+                    <button class="tour-btn tour-skip" onclick="Onboarding.finish()">Skip</button>
+                    <button class="tour-btn tour-next primary" onclick="Onboarding.next()">
+                        ${isLast || step.isFinal ? 'Get Started' : 'Next'}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(this.tooltip);
+        this.tooltip.focus();
+
+        // Enter key support
+        this.tooltip.addEventListener('keydown', e => {
+            if (e.key === 'Enter') this.next();
+            if (e.key === 'Escape') this.finish();
+        });
+    },
+
+    positionTooltip(step, target) {
+        const rect = target.getBoundingClientRect();
+        const tooltipRect = this.tooltip.getBoundingClientRect();
+        const scrollY = window.scrollY;
+        const scrollX = window.scrollX;
+
+        let top, left;
+
+        switch (step.position) {
+            case 'bottom':
+                top = rect.bottom + scrollY + 16;
+                left = rect.left + scrollX + (rect.width / 2);
+                this.tooltip.style.transform = 'translateX(-50%)';
+                break;
+            case 'top':
+                top = rect.top + scrollY - tooltipRect.height - 16;
+                left = rect.left + scrollX + (rect.width / 2);
+                this.tooltip.style.transform = 'translateX(-50%)';
+                break;
+            case 'right':
+                top = rect.top + scrollY + (rect.height / 2);
+                left = rect.right + scrollX + 16;
+                this.tooltip.style.transform = 'translateY(-50%)';
+                break;
+            case 'left':
+                top = rect.top + scrollY + (rect.height / 2);
+                left = rect.left + scrollX - tooltipRect.width - 16;
+                this.tooltip.style.transform = 'translateY(-50%)';
+                break;
+            case 'centered':
+                top = (window.innerHeight - tooltipRect.height) / 2 + scrollY;
+                left = (window.innerWidth - tooltipRect.width) / 2 + scrollX;
+                this.tooltip.style.transform = 'none';
+                break;
+        }
+
+        this.tooltip.style.top = `${top}px`;
+        this.tooltip.style.left = `${left}px`;
+
+        // Re-adjust after render if needed
+        requestAnimationFrame(() => {
+            // overflow check (simple version)
+            if (left < 20) this.tooltip.style.left = '20px';
+            if (left + tooltipRect.width > window.innerWidth - 20) {
+                this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 20}px`;
+            }
+        });
+    },
+
+    positionCenteredTooltip(step) {
+        this.tooltip.style.position = 'fixed';
+        this.tooltip.style.top = '50%';
+        this.tooltip.style.left = '50%';
+        this.tooltip.style.transform = 'translate(-50%, -50%)';
+        this.tooltip.style.maxWidth = '90%';
+    },
+
+    removeTooltip() {
+        if (this.tooltip) {
+            this.tooltip.remove();
+            this.tooltip = null;
+        }
     },
 
     next() {
-        if (this.currentStep < this.steps.length - 1) {
-            this.showStep(this.currentStep + 1);
-        } else {
-            this.skip();
-        }
+        this.showStep(this.currentStep + 1);
     },
 
-    skip() {
-        this.removeExisting();
+    prev() {
+        this.showStep(this.currentStep - 1);
+    },
+
+    finish() {
+        this.removeHighlight();
+        this.removeTooltip();
+        if (this.overlay) this.overlay.remove();
         localStorage.setItem('mempass_tour_seen', 'true');
-    },
 
-    removeExisting() {
-        document.querySelectorAll('.tour-overlay, .tour-tooltip').forEach(el => el.remove());
-        document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+        // Optional: micro confetti or toast
+        if (typeof Utils !== 'undefined' && Utils.showToast) {
+            Utils.showToast('Welcome aboard! Let’s get secure 🔐', 4000);
+        }
     }
 };
 
+// Global access
 window.Onboarding = Onboarding;
+
+// Start when DOM ready
 document.addEventListener('DOMContentLoaded', () => Onboarding.init());
