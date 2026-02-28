@@ -246,6 +246,25 @@ window.unlockVault = unlockVault;
 window.showPinModal = showPinModal;
 window.closePinModal = closePinModal;
 window.verifyPin = verifyPin;
+
+// ────────────────────────────────────────────────
+// Service Worker Registration - Fixed for GitHub Pages (/mempass/)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        const swPath = '/mempass/sw.js';   // sahi file location
+        const swScope = '/mempass/';       // SW scope sirf is folder tak
+
+        navigator.serviceWorker.register(swPath, { scope: swScope })
+            .then(reg => {
+                console.log('✅ Service Worker registered with scope:', reg.scope);
+            })
+            .catch(err => {
+                console.error('❌ Service Worker registration failed:', err);
+            });
+    });
+} else {
+    console.warn('Service Worker not supported in this browser');
+}
 window.forgotPin = forgotPin;
 window.exportVault = exportVault;
 window.importVault = importVault;
