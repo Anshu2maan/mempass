@@ -75,6 +75,7 @@ function showPinModal(mode) {
     const modalTitles = {
         setup: { title: '🔐 Set PIN', desc: 'Choose a 6-digit PIN' },
         verify: { title: '🔓 Unlock', desc: 'Enter your 6-digit PIN' },
+        verify_single: { title: '🔑 Verify PIN', desc: 'Enter PIN to see password' },
         change: { title: '🔄 Change PIN', desc: 'Enter new 6-digit PIN' }
     };
     
@@ -138,6 +139,45 @@ async function verifyPin() {
                 localStorage.removeItem(STORAGE_KEYS.pinLockUntil);
             }, 1200);
             
+        } else if (pinModalMode === 'verify_single') {
+            const salt = cryptoUtils.fromBase64(vault.settings.saltB64);
+            const derivedKey = await cryptoUtils.deriveKeyFromPin(pin, salt);
+            
+            // Verify by attempting to decrypt the target password
+            const item = vault.passwords.find(p => p.id == pendingDecrypt.id);
+            try {
+                const decrypted = await vault.decryptField(derivedKey, item.password);
+                item._decryptedPassword = decrypted;
+                
+                // Also decrypt username and notes if they exist
+                if (item.username?.iv) item._decryptedUsername = await vault.decryptField(derivedKey, item.username);
+                if (item.notes?.iv) item._decryptedNotes = await vault.decryptField(derivedKey, item.notes);
+
+                succ.textContent = '✓ Unlocked';
+                pinAttempts = 0;
+                localStorage.setItem(STORAGE_KEYS.pinAttempts, '0');
+                
+                setTimeout(() => {
+                    closePinModal();
+                    if (pendingDecrypt.action === 'copy') {
+                        navigator.clipboard.writeText(decrypted)
+                            .then(() => Utils.showToast('✓ Copied'))
+                            .catch(() => Utils.showToast('❌ Copy failed'));
+                    } else if (pendingDecrypt.action === 'view') {
+                        const el = document.getElementById(`password-${item.id}`);
+                        if (el) {
+                            el.innerHTML = `
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span style="font-family:monospace;font-size:1.2rem;">${Utils.escapeHtml(decrypted)}</span>
+                                    <button class="action-btn" onclick="copySavedPassword('${item.id}')">📋</button>
+                                </div>`;
+                        }
+                    }
+                    pendingDecrypt = null;
+                }, 600);
+            } catch (e) {
+                throw new Error('Wrong PIN');
+            }
         } else {
             // If no PIN has been set yet, inform user to set PIN instead of saying "Wrong PIN"
             if (!vault?.settings?.saltB64) {
@@ -187,6 +227,12 @@ async function verifyPin() {
     } catch (e) {
         console.error('PIN error:', e);
         err.textContent = e.message || 'Error occurred';
+        if (e.message === 'Wrong PIN') {
+            pinAttempts++;
+            localStorage.setItem(STORAGE_KEYS.pinAttempts, pinAttempts.toString());
+            clearPinInputs();
+            document.getElementById('pin1')?.focus();
+        }
     }
 }
 
@@ -438,29 +484,60 @@ function updateMasterStrength(phrase) {
     resetInactivityTimer();
 }
 
-// Toggle visibility of generated password in the generator area
-function togglePasswordOutput() {
-    const output = document.getElementById('passwordOutput');
-    const btn = document.getElementById('togglePasswordOutput');
-    if (!output || !btn) return;
+// Toggle visibility of master phrase
+function toggleMasterPhrase() {
+    const input = document.getElementById('masterPhrase');
+    const btn = document.getElementById('toggleMasterPhrase');
+    if (!input || !btn) return;
 
-    const isMasked = output.style.webkitTextSecurity === 'disc' || output.dataset.masked === '1';
-    if (isMasked) {
-        // show
-        output.style.webkitTextSecurity = 'none';
-        output.textContent = output.dataset.realPassword || currentPassword || '';
-        output.dataset.masked = '0';
+    if (input.type === 'password') {
+        input.type = 'text';
         btn.textContent = '🙈';
     } else {
-        // hide
-        output.style.webkitTextSecurity = 'disc';
-        output.textContent = output.dataset.realPassword ? output.dataset.realPassword : currentPassword || '';
-        output.dataset.masked = '1';
+        input.type = 'password';
         btn.textContent = '👁️';
     }
-
     resetInactivityTimer();
 }
+
+// Initial setup
+document.addEventListener('DOMContentLoaded', () => {
+    // Add listener for master phrase toggle
+    const masterToggle = document.getElementById('toggleMasterPhrase');
+    if (masterToggle) {
+        masterToggle.onclick = toggleMasterPhrase;
+    }
+    
+    // Add listener for increment version
+    const incBtn = document.getElementById('incrementVersionBtn');
+    if (incBtn) {
+        incBtn.onclick = incrementVersion;
+    }
+    
+    // Add listener for generate button
+    const genBtn = document.getElementById('generatePasswordBtn');
+    if (genBtn) {
+        genBtn.onclick = generatePassword;
+    }
+    
+    // Add listener for save button
+    const saveBtn = document.getElementById('savePasswordBtn');
+    if (saveBtn) {
+        saveBtn.onclick = savePassword;
+    }
+    
+    // Add listener for copy button
+    const copyBtn = document.getElementById('copyPasswordBtn');
+    if (copyBtn) {
+        copyBtn.onclick = copyPassword;
+    }
+    
+    // Add listener for toggle password output
+    const toggleOutputBtn = document.getElementById('togglePasswordOutput');
+    if (toggleOutputBtn) {
+        toggleOutputBtn.onclick = togglePasswordOutput;
+    }
+});
 
 // ==================== PASSWORD ACTIONS ====================
 async function savePassword() {
@@ -578,15 +655,10 @@ async function copySavedPassword(id) {
     
     let password = item._decryptedPassword;
     
-    if (!password && item.password?.iv && vault.key) {
-        try {
-            password = await vault.decryptField(vault.key, item.password);
-            item._decryptedPassword = password;
-        } catch (e) {
-            console.error('Decryption failed:', e);
-            Utils.showToast('❌ Decryption failed');
-            return;
-        }
+    if (!password) {
+        pendingDecrypt = { id, action: 'copy' };
+        showPinModal('verify_single');
+        return;
     }
     
     navigator.clipboard.writeText(password)
@@ -601,20 +673,13 @@ async function togglePasswordVisibility(id) {
     const item = vault.passwords.find(p => p.id == id);
     if (!el || !item) return;
     
-    if (pendingDecrypt) pendingDecrypt = null;
-    
     if (el.innerHTML.includes('hidden-password')) {
         let password = item._decryptedPassword;
         
-        if (!password && item.password?.iv) {
-            Utils.showToast('Decrypting...', 800);
-            try {
-                password = await vault.decryptField(vault.key, item.password);
-                item._decryptedPassword = password;
-            } catch (e) {
-                Utils.showToast('❌ Decrypt failed');
-                return;
-            }
+        if (!password) {
+            pendingDecrypt = { id, action: 'view' };
+            showPinModal('verify_single');
+            return;
         }
         
         el.innerHTML = `
