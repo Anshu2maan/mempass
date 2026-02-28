@@ -248,11 +248,11 @@ window.closePinModal = closePinModal;
 window.verifyPin = verifyPin;
 
 // ────────────────────────────────────────────────
-// Service Worker Registration - Fixed for GitHub Pages (/mempass/)
+// Service Worker – Correct registration for GitHub Pages /mempass/ subfolder
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        const swPath = '/mempass/sw.js';   // sahi file location
-        const swScope = '/mempass/';       // SW scope sirf is folder tak
+        const swPath = '/mempass/sw.js';
+        const swScope = '/mempass/';
 
         navigator.serviceWorker.register(swPath, { scope: swScope })
             .then(reg => {
