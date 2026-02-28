@@ -108,7 +108,7 @@ const DOCUMENT_TYPES = {
         fields: ['documentNumber', 'name', 'issueDate', 'expiryDate'],
         fileTypes: ['image/*', 'application/pdf'],
         maxFiles: 5,
-        maxSize: 10 * 1024 * 1024,
+        maxSize: 100 * 1024 * 1024,
         template: {
             documentNumber: { label: 'Document Number' },
             name: { label: 'Document Title' },
