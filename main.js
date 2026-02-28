@@ -54,6 +54,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         Utils?.showToast?.("Error starting MemPass. Check console.");
     }
 });
+function lockVault() {
+  // Example logic to lock the vault
+  const vaultElement = document.getElementById("vault");
+  if (vaultElement) {
+    vaultElement.classList.add("locked");
+  }
+
+  // Clear sensitive inputs
+  const pinInput = document.getElementById("pinInput");
+  if (pinInput) {
+    pinInput.value = "";
+  }
+
+  console.log("Vault locked.");
+}
 
 function setupInitialUIState() {
     const setupPinBtn = document.getElementById('setupPinBtn');
