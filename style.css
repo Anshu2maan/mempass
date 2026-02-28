@@ -251,43 +251,32 @@ button:disabled {
 }
 
 /* ==================== PASSWORD CONTAINER (with toggle) ==================== */
-.password-container { 
-    position: relative; 
-    display: flex; 
-    align-items: center; 
+.password-container {
+    position: relative;
 }
 
-.toggle-password { 
-    position: absolute; 
-    right: 10px; 
-    background: none; 
-    border: none; 
-    cursor: pointer; 
-    font-size: 1.2rem; 
-    color: var(--text-secondary); 
-    padding: 5px; 
-    width: auto; 
-    margin: 0;
-}
-
-/* Ensure the input inside password containers doesn't get hidden by the toggle */
-.password-container input, .password-container textarea { 
-    flex: 1; 
-    padding-right: 48px; 
-}
-
-/* Make .options buttons full-width where layout expects it */
-.options > button { 
+.password-container input {
+    padding-right: 50px;           /* eye ke liye space */
     width: 100%;
 }
 
-.toggle-password:hover { 
-    color: var(--text-primary); 
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
-    transform: none;
-    box-shadow: none;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0 8px;
+    z-index: 10;
 }
 
+.toggle-password:hover {
+    color: var(--text-primary);
+}
 /* ==================== SECURITY WARNING ==================== */
 .security-warning { 
     background: rgba(254, 226, 226, 0.6); 
