@@ -1432,6 +1432,7 @@ async function downloadDocumentFile(docId, index) {
 }
 
 // Preview file in modal (decrypts file if needed)
+// ==================== PREVIEW DOCUMENT FILE (PDF FIX) ====================
 async function previewDocumentFile(docId, index) {
     if (!window.isVaultUnlocked) {
         showPinModal('verify');
@@ -1448,50 +1449,83 @@ async function previewDocumentFile(docId, index) {
     const modal = document.getElementById('filePreviewModal');
     const content = document.getElementById('filePreviewContent');
     const titleEl = document.getElementById('filePreviewTitle');
+
     titleEl.textContent = `${fileMeta.name || 'File'} (${fileMeta.type || ''})`;
-    content.innerHTML = '<div style="padding:30px;color:#94a3b8;">Preparing preview...</div>';
+    content.innerHTML = '<div style="padding:40px;text-align:center;color:#94a3b8;">Decrypting...</div>';
     modal.style.display = 'flex';
+
+    let objUrl = null;
 
     try {
         const blob = await window.documentVault.decryptFile(fileMeta);
-        window.currentPreview = { docId, index, blob, filename: fileMeta.name, mime: fileMeta.type };
-        const objUrl = URL.createObjectURL(blob);
+        objUrl = URL.createObjectURL(blob);
+
+        window.currentPreview = {
+            docId,
+            index,
+            blob,
+            filename: fileMeta.name,
+            mime: fileMeta.type,
+            objUrl                     // ← important for cleanup
+        };
+
         content.innerHTML = '';
 
-        if ((fileMeta.type || '').startsWith('image/')) {
+        const isImage = (fileMeta.type || '').startsWith('image/');
+        const isPdf   = (fileMeta.type || '').toLowerCase().includes('pdf');
+
+        if (isImage) {
             const img = document.createElement('img');
             img.src = objUrl;
             img.style.maxWidth = '100%';
             img.style.maxHeight = '70vh';
-            img.onload = () => { /* reveal */ };
-            img.onerror = () => { content.innerHTML = '<div style="padding:20px;color:#f56565;">Unable to preview image.</div>'; };
+            img.style.objectFit = 'contain';
             content.appendChild(img);
-        } else if ((fileMeta.type || '').includes('pdf')) {
-            const iframe = document.createElement('iframe');
-            iframe.src = objUrl;
-            iframe.style.width = '100%';
-            iframe.style.height = '70vh';
-            content.appendChild(iframe);
+
+        } else if (isPdf) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            if (isMobile) {
+                // ───── MOBILE: Native PDF viewer (best experience) ─────
+                content.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px;">
+                        <div style="font-size:4.5rem;margin-bottom:20px;">📕</div>
+                        <h3>PDF Ready</h3>
+                        <p style="color:#718096;margin:15px 0 30px;">Tap to open in your browser's PDF viewer</p>
+                        <button onclick="openPdfInNewTab()" 
+                                style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;
+                                       padding:18px 40px;font-size:1.15rem;border:none;border-radius:16px;
+                                       box-shadow:0 10px 25px rgba(102,126,234,0.35);">
+                            📄 Open PDF
+                        </button>
+                    </div>`;
+            } else {
+                // ───── DESKTOP: Embedded iframe (as before) ─────
+                const iframe = document.createElement('iframe');
+                iframe.src = objUrl;
+                iframe.style.width = '100%';
+                iframe.style.height = '70vh';
+                iframe.style.border = 'none';
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+                content.appendChild(iframe);
+            }
         } else {
-            const p = document.createElement('p');
-            p.textContent = `${fileMeta.name} — ${fileMeta.type || 'file'}`;
-            const a = document.createElement('a');
-            a.href = objUrl;
-            a.download = fileMeta.name || 'file';
-            a.textContent = 'Download file';
-            a.style.display = 'inline-block';
-            a.style.marginTop = '12px';
-            content.appendChild(p);
-            content.appendChild(a);
+            // Other file types
+            content.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;">
+                    <div style="font-size:3.5rem;margin-bottom:20px;">📎</div>
+                    <p><strong>${Utils.escapeHtml(fileMeta.name)}</strong></p>
+                    <p style="color:#718096;">${window.documentVault.formatFileSize(fileMeta.size)}</p>
+                    <button onclick="downloadCurrentPreview()" style="margin-top:25px;">⬇️ Download File</button>
+                </div>`;
         }
     } catch (err) {
-        console.error('Preview decrypt failed', err);
-        content.innerHTML = '<div style="padding:20px;color:#f56565;">Unable to preview file.</div>';
+        console.error('Preview error:', err);
+        content.innerHTML = '<div style="padding:40px;color:#f56565;text-align:center;">Unable to preview this file.</div>';
     }
 
     resetInactivityTimer();
 }
-
 function sharePreview() {
     if (!window.currentPreview) {
         alert('No preview available to share.');
@@ -1520,6 +1554,27 @@ function sharePreview() {
     }
 
     alert('Sharing not supported on this device. Please download the file and share it manually.');
+}
+
+function openPdfInNewTab() {
+    if (window.currentPreview?.objUrl) {
+        window.open(window.currentPreview.objUrl, '_blank');
+    } else {
+        Utils.showToast('PDF not ready');
+    }
+}
+
+function downloadCurrentPreview() {
+    if (!window.currentPreview?.blob) return;
+    const { blob, filename } = window.currentPreview;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'document.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
 }
 
 async function deleteDocument(id) {
