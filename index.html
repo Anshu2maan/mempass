@@ -7,15 +7,18 @@
     
     <!-- Content Security Policy - SIMPLIFIED -->
     <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        img-src 'self' data: blob: https:;
-        connect-src 'self';
-        font-src 'self' data: https://fonts.gstatic.com;
-        worker-src 'self' blob:;
-        frame-ancestors 'none';
-    ">
+    default-src 'self' blob: data:;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    img-src 'self' data: blob: https:;
+    connect-src 'self';
+    font-src 'self' data: https://fonts.gstatic.com;
+    worker-src 'self' blob:;
+    frame-src 'self' blob: data:;
+    child-src 'self' blob: data:;
+    object-src 'self' blob: data:;
+    frame-ancestors 'none';
+">
     
     <title>🔐 MemPass – Password Generator & Secure Vault</title>
     <meta name="description" content="Generate secure passwords. Store them locally with PIN protection.">
