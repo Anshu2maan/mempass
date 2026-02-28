@@ -1,4 +1,4 @@
-// onboarding.js - Comprehensive, accessible onboarding tour for MemPass
+// onboarding.js - Fully Updated, Crash-Proof, Mobile-Friendly Onboarding for MemPass
 const Onboarding = {
     steps: [
         {
@@ -72,11 +72,8 @@ const Onboarding = {
 
     init() {
         if (localStorage.getItem('mempass_tour_seen') === 'true') return;
-
-        // Optional: only show if no vault setup yet
-        // if (localStorage.getItem('mempass_settings_v2')) return;
-
-        setTimeout(() => this.start(), 1200);
+        // Delay badha diya taaki sab elements load ho jayein (vault locked hone pe bhi crash na ho)
+        setTimeout(() => this.start(), 3500); // 3.5 seconds wait
     },
 
     start() {
@@ -102,7 +99,8 @@ const Onboarding = {
         if (step.element) {
             const target = document.querySelector(step.element);
             if (!target) {
-                // Element nahi mila → next step pe chale jao
+                // Element nahi mila (jaise locked vault mein hidden tab) → auto skip
+                console.warn(`Tour step skipped: Element not found → ${step.element}`);
                 return this.next();
             }
 
@@ -146,7 +144,7 @@ const Onboarding = {
             <div class="tour-content">${step.content}</div>
             <div class="tour-footer">
                 <div class="tour-progress">
-                    ${Array(this.steps.length).fill().map((_, i) => 
+                    ${Array(this.steps.length).fill().map((_, i) =>
                         `<span class="${i === index ? 'active' : ''}"></span>`
                     ).join('')}
                 </div>
@@ -163,7 +161,7 @@ const Onboarding = {
         document.body.appendChild(this.tooltip);
         this.tooltip.focus();
 
-        // Enter key support
+        // Keyboard support
         this.tooltip.addEventListener('keydown', e => {
             if (e.key === 'Enter') this.next();
             if (e.key === 'Escape') this.finish();
@@ -209,12 +207,16 @@ const Onboarding = {
         this.tooltip.style.top = `${top}px`;
         this.tooltip.style.left = `${left}px`;
 
-        // Re-adjust after render if needed
+        // Overflow handling (mobile pe sahi rahe)
         requestAnimationFrame(() => {
-            // overflow check (simple version)
-            if (left < 20) this.tooltip.style.left = '20px';
-            if (left + tooltipRect.width > window.innerWidth - 20) {
-                this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 20}px`;
+            const currentRect = this.tooltip.getBoundingClientRect();
+            if (currentRect.left < 10) this.tooltip.style.left = '10px';
+            if (currentRect.right > window.innerWidth - 10) {
+                this.tooltip.style.left = `${window.innerWidth - currentRect.width - 10}px`;
+            }
+            if (currentRect.bottom > window.innerHeight - 10) {
+                // Agar bottom overflow ho to top pe shift kar do
+                this.tooltip.style.top = `${window.innerHeight - currentRect.height - 10}px`;
             }
         });
     },
@@ -225,6 +227,7 @@ const Onboarding = {
         this.tooltip.style.left = '50%';
         this.tooltip.style.transform = 'translate(-50%, -50%)';
         this.tooltip.style.maxWidth = '90%';
+        this.tooltip.style.zIndex = '10001';
     },
 
     removeTooltip() {
@@ -248,7 +251,6 @@ const Onboarding = {
         if (this.overlay) this.overlay.remove();
         localStorage.setItem('mempass_tour_seen', 'true');
 
-        // Optional: micro confetti or toast
         if (typeof Utils !== 'undefined' && Utils.showToast) {
             Utils.showToast('Welcome aboard! Let’s get secure 🔐', 4000);
         }
