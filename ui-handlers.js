@@ -515,6 +515,64 @@ function incrementVersion() {
     resetInactivityTimer();
 }
 
+// ==================== NEW COOL SAVE MODAL ====================
+function showSavePasswordModal() {
+    if (!currentPassword || !currentService) {
+        Utils.showToast('Generate a password first ✨');
+        return;
+    }
+    if (!vault?.settings?.saltB64) {
+        showPinModal('setup');
+        return;
+    }
+    if (!window.isVaultUnlocked) {
+        showPinModal('verify');
+        return;
+    }
+
+    // Fill data
+    document.getElementById('saveService').value = currentService;
+    document.getElementById('savePasswordField').value = currentPassword;
+    document.getElementById('saveUsername').value = '';
+    document.getElementById('saveNotes').value = '';
+    document.getElementById('saveFavorite').checked = false;
+
+    document.getElementById('savePasswordModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('saveUsername').focus(), 200);
+}
+
+function closeSavePasswordModal() {
+    document.getElementById('savePasswordModal').style.display = 'none';
+}
+
+async function confirmSavePassword() {
+    const username = document.getElementById('saveUsername').value.trim();
+    const notes = document.getElementById('saveNotes').value.trim();
+    const isFavorite = document.getElementById('saveFavorite').checked;
+
+    try {
+        const entry = await vault.addPassword(currentService, username, currentPassword, notes);
+        
+        if (isFavorite && entry.id) {
+            const pwd = vault.passwords.find(p => p.id === entry.id);
+            if (pwd) pwd.favorite = true;
+            await vault.saveToDB();
+        }
+
+        closeSavePasswordModal();
+        loadSavedPasswords();
+        
+        // Super cool success
+        Utils.showToast('🎉 Password saved successfully!', 3000);
+        
+        // Optional: clear generator after save
+        // document.getElementById('passwordDisplay').style.display = 'none';
+        
+    } catch (e) {
+        Utils.showToast('❌ Save failed: ' + e.message);
+    }
+}
+
 // ==================== PASSWORD VAULT DISPLAY ====================
 async function loadSavedPasswords() {
     if (!window.isVaultUnlocked || !vault) return;
