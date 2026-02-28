@@ -259,3 +259,4 @@ const Onboarding = {
 window.Onboarding = Onboarding;
 document.addEventListener('DOMContentLoaded', () => {
     Onboarding.init();
+    });
