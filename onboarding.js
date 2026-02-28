@@ -258,6 +258,4 @@ const Onboarding = {
 // Auto-start after DOM + critical scripts
 window.Onboarding = Onboarding;
 document.addEventListener('DOMContentLoaded', () => {
-    // Extra safety delay — helps when UI is built dynamically
-    setTimeout(() => Onboarding.init(), 2200);
-});
+    Onboarding.init();
