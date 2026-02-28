@@ -462,58 +462,6 @@ function togglePasswordOutput() {
     resetInactivityTimer();
 }
 
-// ==================== PASSWORD ACTIONS ====================
-async function savePassword() {
-    const service = document.getElementById('serviceName').value.trim();
-
-    if (!service || !currentPassword) {
-        Utils.showToast('Generate password first');
-        return;
-    }
-
-    if (!vault?.settings?.saltB64) {
-        showPinModal('setup');
-        return;
-    }
-
-    if (!window.isVaultUnlocked) {
-        showPinModal('verify');
-        return;
-    }
-
-    const username = prompt('Username:', 'user@example.com');
-    if (username === null) return;
-
-    const notes = prompt('Notes (optional):', '');
-
-    try {
-        await vault.addPassword(service, username, currentPassword, notes);
-        loadSavedPasswords();
-        Utils.showToast('Password saved');
-        resetInactivityTimer();
-    } catch (error) {
-        console.error('Save error:', error);
-        Utils.showToast('Save failed');
-    }
-}
-
-function copyPassword() {
-    if (!currentPassword) {
-        Utils.showToast('No password');
-        return;
-    }
-    
-    navigator.clipboard.writeText(currentPassword)
-    .then(() => Utils.showToast('Copied'))
-    .catch(() => Utils.showToast('Copy failed'));
-    resetInactivityTimer();
-}
-
-function incrementVersion() {
-    const el = document.getElementById('version');
-    el.value = parseInt(el.value) + 1;
-    resetInactivityTimer();
-}
 
 // ==================== NEW COOL SAVE MODAL ====================
 function showSavePasswordModal() {
@@ -1799,7 +1747,12 @@ function debugVault() {
     console.log('pin attempts:', pinAttempts);
     console.log('lock until:', localStorage.getItem(STORAGE_KEYS.pinLockUntil));
 }
-
+// Save Password Modal Listeners
+document.getElementById('confirmSaveBtn')?.addEventListener('click', confirmSavePassword);
+document.getElementById('cancelSaveBtn')?.addEventListener('click', closeSavePasswordModal);
+document.getElementById('modalCopyBtn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(currentPassword).then(() => Utils.showToast('📋 Password copied'));
+});
 // ==================== GLOBAL EXPORTS ====================
 // Setup preview modal buttons
 try {
