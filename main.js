@@ -202,7 +202,30 @@ function setupEventListeners() {
     }
 
 }
+// Master Phrase Show/Hide Toggle
+const toggleMasterBtn = document.getElementById('toggleMasterPhrase');
+const masterPhraseInput = document.getElementById('masterPhrase');
 
+if (toggleMasterBtn && masterPhraseInput) {
+    toggleMasterBtn.addEventListener('click', () => {
+        const currentType = masterPhraseInput.getAttribute('type');
+        
+        if (currentType === 'password') {
+            masterPhraseInput.setAttribute('type', 'text');
+            toggleMasterBtn.textContent = '🙈';   // ya '👁️‍🗨️' ya FontAwesome eye-slash use kar sakta hai
+        } else {
+            masterPhraseInput.setAttribute('type', 'password');
+            toggleMasterBtn.textContent = '👁️';
+        }
+        
+        // Focus wapas input pe (better UX)
+        masterPhraseInput.focus();
+    });
+    
+    console.log('Master phrase toggle button attached ✅');
+} else {
+    console.error('Master phrase toggle elements not found!');
+}
 function setupPinInputs() {
     for (let i = 1; i <= PIN_LENGTH; i++) {
         const pinInput = document.getElementById(`pin${i}`);
