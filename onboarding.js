@@ -1,16 +1,18 @@
-// onboarding.js - Fully Crash-Proof, Positioning-Fixed & Updated (Feb 2026)
+// onboarding.js - Improved UX version (Feb 2026)
+// Goal: highlight + tooltip must appear together reliably
+
 const Onboarding = {
     steps: [
-        { element: '.logo', title: 'Welcome to MemPass! 🔐', content: 'Your 100% offline, privacy-first password & document vault.', position: 'bottom' },
-        { element: '#masterPhrase', title: 'Your Master Phrase 🎯', content: 'This is the only secret you need to remember.', position: 'bottom' },
-        { element: '#serviceName', title: 'Service / Website Name 🌐', content: 'Type any service to get a unique password.', position: 'bottom' },
-        { element: '#passwordLength, #version', title: 'Customize Your Password', content: 'Choose length (16 recommended) and version.', position: 'right' },
-        { element: '#generatePasswordBtn', title: 'Generate Secure Password ✨', content: 'Click to generate. Copy or save.', position: 'top' },
-        { element: '#savePasswordBtn', title: 'Save to Vault 🔒', content: 'Save passwords encrypted with your PIN.', position: 'top' },
-        { element: '#unlockVaultBtn, #setupPinBtn', title: 'Unlock with PIN', content: 'Set/enter 6-digit PIN to access vault.', position: 'bottom' },
-        { element: '#showDocumentsTab', title: 'Document Vault 📁', content: 'Store documents securely with expiry alerts.', position: 'top' },
-        { element: '#themeToggleBtn', title: 'Dark/Light Mode 🌓', content: 'Toggle theme anytime.', position: 'left' },
-        { element: null, title: 'You\'re All Set! 🚀', content: 'Start using MemPass securely!<br><br>Enjoy!', position: 'centered', isFinal: true }
+        { element: '.logo',               title: 'Welcome to MemPass! 🔐',      content: 'Your 100% offline, privacy-first password & document vault.',                  position: 'bottom' },
+        { element: '#masterPhrase',       title: 'Your Master Phrase 🎯',       content: 'This is the only secret you need to remember.',                                 position: 'bottom' },
+        { element: '#serviceName',        title: 'Service / Website Name 🌐',   content: 'Type any service to get a unique password.',                                     position: 'bottom' },
+        { element: '#passwordLength',     title: 'Customize Your Password',     content: 'Choose length (16 recommended) and version.',                                     position: 'right',  altElements: ['#version'] },
+        { element: '#generatePasswordBtn',title: 'Generate Secure Password ✨', content: 'Click to generate. Copy or save.',                                               position: 'top'    },
+        { element: '#savePasswordBtn',    title: 'Save to Vault 🔒',            content: 'Save passwords encrypted with your PIN.',                                        position: 'top'    },
+        { element: '#unlockVaultBtn',     title: 'Unlock with PIN',             content: 'Set/enter 6-digit PIN to access vault.',                                         position: 'bottom', altElements: ['#setupPinBtn'] },
+        { element: '#showDocumentsTab',   title: 'Document Vault 📁',           content: 'Store documents securely with expiry alerts.',                                   position: 'top'    },
+        { element: '#themeToggleBtn',     title: 'Dark/Light Mode 🌓',          content: 'Toggle theme anytime.',                                                          position: 'left'   },
+        { element: null,                  title: 'You\'re All Set! 🚀',         content: 'Start using MemPass securely!<br><br>Enjoy!',                                    position: 'centered', isFinal: true }
     ],
 
     currentStep: -1,
@@ -20,13 +22,14 @@ const Onboarding = {
 
     init() {
         if (localStorage.getItem('mempass_tour_seen') === 'true') return;
-        // Safe delay - most UI elements (including conditional PIN buttons) should be ready
-        setTimeout(() => this.start(), 6500);
+
+        // Give DOM more time — especially on slower devices
+        setTimeout(() => this.start(), 1800);
     },
 
-    start() {
+    async start() {
         this.createOverlay();
-        this.showStep(0);
+        await this.showStep(0);
     },
 
     createOverlay() {
@@ -35,45 +38,66 @@ const Onboarding = {
         document.body.appendChild(this.overlay);
     },
 
-    showStep(index) {
+    async showStep(index) {
         if (index < 0 || index >= this.steps.length) return this.finish();
 
         this.currentStep = index;
         const step = this.steps[index];
 
+        // 1. Clean previous state
         this.removeHighlight();
         this.removeTooltip();
 
         let target = null;
 
+        // Support alternative selectors (especially useful for conditional elements)
         if (step.element) {
             target = document.querySelector(step.element);
-            if (!target) {
-                console.warn(`Tour step ${index + 1} skipped: Element not found → ${step.element}`);
-                return this.next();
+            if (!target && step.altElements) {
+                for (const alt of step.altElements) {
+                    target = document.querySelector(alt);
+                    if (target) break;
+                }
             }
-            this.highlightElement(target);
-            target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
         }
 
-        // Create tooltip first
+        // If still no target and it's not the final centered step → skip
+        if (!target && !step.isFinal) {
+            console.warn(`Tour step ${index + 1} skipped — element not found: ${step.element}`);
+            return this.showStep(index + 1);
+        }
+
+        // 2. Scroll to element (if exists)
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            // Give scroll & layout time
+            await new Promise(r => setTimeout(r, 450));
+        }
+
+        // 3. Highlight (if target exists)
+        if (target) {
+            this.highlightElement(target);
+        }
+
+        // 4. Create & show tooltip
         this.createTooltip(step, index);
 
-        // Then position it (after scroll has had time to settle)
-        setTimeout(() => {
-            if (target && this.tooltip) {
-                this.positionTooltip(step, target);
-            } else if (this.tooltip) {
-                this.positionCenteredTooltip(step);
-            }
-        }, 350); // Wait for scroll animation + layout reflow
+        // 5. Position it (after DOM has settled)
+        await new Promise(r => setTimeout(r, 100));
+        if (target) {
+            this.positionTooltip(step, target);
+        } else {
+            this.positionCenteredTooltip();
+        }
+
+        // 6. Focus tooltip for keyboard accessibility
+        this.tooltip?.focus();
     },
 
     highlightElement(target) {
-        if (target) {
-            target.classList.add('tour-highlight');
-            this.highlighted = target;
-        }
+        if (!target) return;
+        target.classList.add('tour-highlight');
+        this.highlighted = target;
     },
 
     removeHighlight() {
@@ -88,38 +112,44 @@ const Onboarding = {
         this.tooltip.className = `tour-tooltip tour-${step.position || 'centered'}`;
         this.tooltip.setAttribute('role', 'dialog');
         this.tooltip.setAttribute('aria-labelledby', 'tour-title');
-        this.tooltip.setAttribute('tabindex', '-1');
+        this.tooltip.tabIndex = -1;
 
         const isLast = index === this.steps.length - 1;
 
         this.tooltip.innerHTML = `
             <div class="tour-header">
                 <h3 id="tour-title">${step.title}</h3>
-                <button class="tour-close" aria-label="Close tour" onclick="Onboarding.finish()">×</button>
+                <button class="tour-close" aria-label="Close tour">×</button>
             </div>
             <div class="tour-content">${step.content}</div>
             <div class="tour-footer">
                 <div class="tour-progress">
-                    ${Array(this.steps.length).fill().map((_, i) => 
-                        `<span class="${i === index ? 'active' : ''}"></span>`
-                    ).join('')}
+                    ${this.steps.map((_, i) => `<span class="${i === index ? 'active' : ''}"></span>`).join('')}
                 </div>
                 <div class="tour-actions">
-                    ${index > 0 ? '<button class="tour-btn tour-prev" onclick="Onboarding.prev()">Previous</button>' : ''}
-                    <button class="tour-btn tour-skip" onclick="Onboarding.finish()">Skip</button>
-                    <button class="tour-btn tour-next primary" onclick="Onboarding.next()">
-                        ${isLast || step.isFinal ? 'Get Started' : 'Next'}
+                    ${index > 0 ? '<button class="tour-btn tour-prev">Back</button>' : ''}
+                    <button class="tour-btn ${isLast ? 'primary' : ''}" data-action="${isLast ? 'finish' : 'next'}">
+                        ${isLast ? 'Finish' : 'Next'}
                     </button>
+                    ${!isLast ? '<button class="tour-btn tour-skip">Skip</button>' : ''}
                 </div>
             </div>
         `;
 
         document.body.appendChild(this.tooltip);
-        this.tooltip.focus();
 
+        // Event listeners
+        this.tooltip.querySelector('.tour-close')?.addEventListener('click', () => this.finish());
+        this.tooltip.querySelector('[data-action="next"]')?.addEventListener('click', () => this.next());
+        this.tooltip.querySelector('.tour-prev')?.addEventListener('click', () => this.prev());
+        this.tooltip.querySelector('.tour-skip')?.addEventListener('click', () => this.finish());
+
+        // Keyboard support
         this.tooltip.addEventListener('keydown', e => {
-            if (e.key === 'Enter') this.next();
+            if (e.key === 'Enter' || e.key === ' ') this.next();
             if (e.key === 'Escape') this.finish();
+            if (e.key === 'ArrowLeft' && index > 0) this.prev();
+            if (e.key === 'ArrowRight') this.next();
         });
     },
 
@@ -136,42 +166,40 @@ const Onboarding = {
 
             switch (step.position) {
                 case 'bottom':
-                    top = rect.bottom + 20;
+                    top  = rect.bottom + 16;
                     left = rect.left + rect.width / 2;
                     transform = 'translateX(-50%)';
                     break;
                 case 'top':
-                    top = rect.top - tooltipRect.height - 20;
+                    top  = rect.top - tooltipRect.height - 16;
                     left = rect.left + rect.width / 2;
                     transform = 'translateX(-50%)';
                     break;
                 case 'right':
-                    top = rect.top + rect.height / 2;
-                    left = rect.right + 20;
+                    top  = rect.top + rect.height / 2;
+                    left = rect.right + 16;
                     transform = 'translateY(-50%)';
                     break;
                 case 'left':
-                    top = rect.top + rect.height / 2;
-                    left = rect.left - tooltipRect.width - 20;
+                    top  = rect.top + rect.height / 2;
+                    left = rect.left - tooltipRect.width - 16;
                     transform = 'translateY(-50%)';
                     break;
                 default:
-                    this.positionCenteredTooltip(step);
+                    this.positionCenteredTooltip();
                     return;
             }
 
-            // Fixed positioning prevents scroll issues
             this.tooltip.style.position = 'fixed';
-            this.tooltip.style.top = `${top}px`;
-            this.tooltip.style.left = `${left}px`;
+            this.tooltip.style.top    = `${top}px`;
+            this.tooltip.style.left   = `${left}px`;
             this.tooltip.style.transform = transform;
 
-            // Clamp to viewport (prevents going off-screen)
+            // Final viewport clamping (very important on mobile)
             requestAnimationFrame(() => {
                 if (!this.tooltip) return;
                 const cr = this.tooltip.getBoundingClientRect();
 
-                // Horizontal
                 if (cr.left < 12) {
                     this.tooltip.style.left = '12px';
                     this.tooltip.style.transform = 'none';
@@ -180,32 +208,24 @@ const Onboarding = {
                     this.tooltip.style.left = `${vw - cr.width - 12}px`;
                     this.tooltip.style.transform = 'none';
                 }
-
-                // Vertical
-                if (cr.top < 12) {
-                    this.tooltip.style.top = '12px';
-                }
-                if (cr.bottom > vh - 12) {
-                    this.tooltip.style.top = `${vh - cr.height - 12}px`;
-                }
+                if (cr.top < 12)    this.tooltip.style.top = '12px';
+                if (cr.bottom > vh - 12) this.tooltip.style.top = `${vh - cr.height - 12}px`;
             });
         } catch (err) {
-            console.warn('Positioning error:', err);
-            this.positionCenteredTooltip(step);
+            console.warn('Tooltip positioning failed → falling back to center', err);
+            this.positionCenteredTooltip();
         }
     },
 
-    positionCenteredTooltip(step) {
+    positionCenteredTooltip() {
         if (!this.tooltip) return;
-
         this.tooltip.style.position = 'fixed';
-        this.tooltip.style.top = '50%';
-        this.tooltip.style.left = '50%';
+        this.tooltip.style.top      = '50%';
+        this.tooltip.style.left     = '50%';
         this.tooltip.style.transform = 'translate(-50%, -50%)';
-        this.tooltip.style.maxWidth = '90vw';
+        this.tooltip.style.maxWidth  = '90vw';
         this.tooltip.style.maxHeight = '85vh';
         this.tooltip.style.overflowY = 'auto';
-        this.tooltip.style.zIndex = '10001';
     },
 
     removeTooltip() {
@@ -226,13 +246,18 @@ const Onboarding = {
     finish() {
         this.removeHighlight();
         this.removeTooltip();
-        if (this.overlay) this.overlay.remove();
-        localStorage.setItem('mempass_tour_seen', 'true');
-        if (typeof Utils !== 'undefined' && Utils.showToast) {
-            Utils.showToast('Welcome aboard! Let’s get secure 🔐', 4000);
+        if (this.overlay) {
+            this.overlay.remove();
+            this.overlay = null;
         }
+        localStorage.setItem('mempass_tour_seen', 'true');
+        Utils?.showToast?.('Tour completed! Enjoy MemPass 🔐', 3800);
     }
 };
 
+// Auto-start after DOM + critical scripts
 window.Onboarding = Onboarding;
-document.addEventListener('DOMContentLoaded', () => Onboarding.init());
+document.addEventListener('DOMContentLoaded', () => {
+    // Extra safety delay — helps when UI is built dynamically
+    setTimeout(() => Onboarding.init(), 2200);
+});
