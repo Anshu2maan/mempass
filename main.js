@@ -68,8 +68,18 @@ function setupInitialUIState() {
         setupPinBtn.onclick = () => showPinModal('setup');
         lockVault();
     }
+    
+    // Ensure biometric UI updates when modal opens
+    const originalShowPinModal = window.showPinModal;
+    window.showPinModal = function(mode) {
+        originalShowPinModal(mode);
+        setTimeout(() => {
+            if (window.biometric && typeof window.biometric.updatePinModalUI === 'function') {
+                window.biometric.updatePinModalUI();
+            }
+        }, 100);
+    };
 }
-
 function setupEventListeners() {
     // Password generation (async)
     document.getElementById('generatePasswordBtn')?.addEventListener('click', async () => {
