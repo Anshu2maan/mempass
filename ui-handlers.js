@@ -462,63 +462,57 @@ function togglePasswordOutput() {
     resetInactivityTimer();
 }
 
+// ==================== PASSWORD ACTIONS ====================
+async function savePassword() {
+    const service = document.getElementById('serviceName').value.trim();
 
-// ==================== NEW COOL SAVE MODAL ====================
-function showSavePasswordModal() {
-    if (!currentPassword || !currentService) {
-        Utils.showToast('Generate a password first ✨');
+    if (!service || !currentPassword) {
+        Utils.showToast('Generate password first');
         return;
     }
+
     if (!vault?.settings?.saltB64) {
         showPinModal('setup');
         return;
     }
+
     if (!window.isVaultUnlocked) {
         showPinModal('verify');
         return;
     }
 
-    // Fill data
-    document.getElementById('saveService').value = currentService;
-    document.getElementById('savePasswordField').value = currentPassword;
-    document.getElementById('saveUsername').value = '';
-    document.getElementById('saveNotes').value = '';
-    document.getElementById('saveFavorite').checked = false;
+    const username = prompt('Username:', 'user@example.com');
+    if (username === null) return;
 
-    document.getElementById('savePasswordModal').style.display = 'flex';
-    setTimeout(() => document.getElementById('saveUsername').focus(), 200);
-}
-
-function closeSavePasswordModal() {
-    document.getElementById('savePasswordModal').style.display = 'none';
-}
-
-async function confirmSavePassword() {
-    const username = document.getElementById('saveUsername').value.trim();
-    const notes = document.getElementById('saveNotes').value.trim();
-    const isFavorite = document.getElementById('saveFavorite').checked;
+    const notes = prompt('Notes (optional):', '');
 
     try {
-        const entry = await vault.addPassword(currentService, username, currentPassword, notes);
-        
-        if (isFavorite && entry.id) {
-            const pwd = vault.passwords.find(p => p.id === entry.id);
-            if (pwd) pwd.favorite = true;
-            await vault.saveToDB();
-        }
-
-        closeSavePasswordModal();
+        await vault.addPassword(service, username, currentPassword, notes);
         loadSavedPasswords();
-        
-        // Super cool success
-        Utils.showToast('🎉 Password saved successfully!', 3000);
-        
-        // Optional: clear generator after save
-        // document.getElementById('passwordDisplay').style.display = 'none';
-        
-    } catch (e) {
-        Utils.showToast('❌ Save failed: ' + e.message);
+        Utils.showToast('Password saved');
+        resetInactivityTimer();
+    } catch (error) {
+        console.error('Save error:', error);
+        Utils.showToast('Save failed');
     }
+}
+
+function copyPassword() {
+    if (!currentPassword) {
+        Utils.showToast('No password');
+        return;
+    }
+    
+    navigator.clipboard.writeText(currentPassword)
+    .then(() => Utils.showToast('Copied'))
+    .catch(() => Utils.showToast('Copy failed'));
+    resetInactivityTimer();
+}
+
+function incrementVersion() {
+    const el = document.getElementById('version');
+    el.value = parseInt(el.value) + 1;
+    resetInactivityTimer();
 }
 
 // ==================== PASSWORD VAULT DISPLAY ====================
@@ -1747,12 +1741,7 @@ function debugVault() {
     console.log('pin attempts:', pinAttempts);
     console.log('lock until:', localStorage.getItem(STORAGE_KEYS.pinLockUntil));
 }
-// Save Password Modal Listeners
-document.getElementById('confirmSaveBtn')?.addEventListener('click', confirmSavePassword);
-document.getElementById('cancelSaveBtn')?.addEventListener('click', closeSavePasswordModal);
-document.getElementById('modalCopyBtn')?.addEventListener('click', () => {
-    navigator.clipboard.writeText(currentPassword).then(() => Utils.showToast('📋 Password copied'));
-});
+
 // ==================== GLOBAL EXPORTS ====================
 // Setup preview modal buttons
 try {
