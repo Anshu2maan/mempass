@@ -70,22 +70,33 @@ function clearPinInputs() {
 function showPinModal(mode) {
     pinModalMode = mode;
     const title = document.getElementById('pinModalTitle');
-    const desc = document.getElementById('pinModalDescription');
+    const desc = documentDocumentById('pinModalDescription');
+    const forgotLink = document.getElementById('forgotPinLink');
+    const pinInputs = document.querySelector('.pin-inputs');
     
-    const modalTitles = {
-        setup: { title: '🔐 Set PIN', desc: 'Choose a 6-digit PIN' },
-        verify: { title: '🔓 Unlock', desc: 'Enter your 6-digit PIN' },
-        change: { title: '🔄 Change PIN', desc: 'Enter new 6-digit PIN' }
-    };
-    
-    if (title && desc) {
-        title.textContent = modalTitles[mode].title;
-        desc.textContent = modalTitles[mode].desc;
+    // Clear any existing custom buttons
+    const actions = document.querySelector('.pin-actions');
+    if (actions) {
+        const customBtns = actions.querySelectorAll('button:not(#closePinModalBtn)');
+        customBtns.forEach(btn => btn.remove());
     }
+    
+    // Reset to default state
+    if (title) title.textContent = mode === 'setup' ? '🔐 Set PIN' : '🔓 Unlock';
+    if (desc) desc.textContent = mode === 'setup' ? 'Choose a 6-digit PIN' : 'Enter your 6-digit PIN';
+    if (forgotLink) forgotLink.style.display = mode === 'verify' ? 'block' : 'none';
+    if (pinInputs) pinInputs.style.display = 'flex';
     
     clearPinInputs();
     document.getElementById('pinModal').style.display = 'flex';
-    setTimeout(() => document.getElementById('pin1')?.focus(), 100);
+    
+    // Let biometric.js handle the UI if it exists
+    setTimeout(() => {
+        if (window.biometric && typeof window.biometric.updatePinModalUI === 'function') {
+            window.biometric.updatePinModalUI();
+        }
+        document.getElementById('pin1')?.focus();
+    }, 100);
 }
 
 function closePinModal() {
@@ -93,8 +104,10 @@ function closePinModal() {
     clearPinInputs();
     document.getElementById('pinError').textContent = '';
     document.getElementById('pinSuccess').textContent = '';
+    
+    // Remove any leftover highlight
+    document.getElementById('setupPinBtn')?.classList.remove('tour-highlight');
 }
-
 // ==================== PIN VERIFICATION ====================
 async function verifyPin() {
     const pin = getPin();
@@ -121,9 +134,9 @@ async function verifyPin() {
     }
 
     try {
-            if (pinModalMode === 'setup' || pinModalMode === 'change') {
+        if (pinModalMode === 'setup' || pinModalMode === 'change') {
             await vault.setPin(pin);
-            succ.textContent = 'PIN set';
+            succ.textContent = 'PIN set successfully!';
             
             setTimeout(() => {
                 closePinModal();
@@ -136,13 +149,30 @@ async function verifyPin() {
                 pinAttempts = 0;
                 localStorage.setItem(STORAGE_KEYS.pinAttempts, '0');
                 localStorage.removeItem(STORAGE_KEYS.pinLockUntil);
-            }, 1200);
+                
+                // Update biometric UI for next time
+                if (window.biometric && typeof window.biometric.updatePinModalUI === 'function') {
+                    window.biometric.updatePinModalUI();
+                }
+            }, 1500);
             
         } else {
-            // If no PIN has been set yet, inform user to set PIN instead of saying "Wrong PIN"
+            // First, ensure biometric UI is updated
+            if (window.biometric && typeof window.biometric.updatePinModalUI === 'function') {
+                window.biometric.updatePinModalUI();
+            }
+            
+            // If no PIN has been set yet, inform user to set PIN
             if (!vault?.settings?.saltB64) {
-                err.textContent = '🔧 Set PIN first';
+                err.textContent = '🔧 Please set a PIN first';
                 clearPinInputs();
+                
+                // Highlight the Set PIN button
+                const setupBtn = document.getElementById('setupPinBtn');
+                if (setupBtn) {
+                    setupBtn.classList.add('tour-highlight');
+                    setTimeout(() => setupBtn.classList.remove('tour-highlight'), 3000);
+                }
                 return;
             }
 
@@ -169,30 +199,37 @@ async function verifyPin() {
                 pinAttempts++;
                 localStorage.setItem(STORAGE_KEYS.pinAttempts, pinAttempts.toString());
                 
-                    if (pinAttempts >= 5) {
+                if (pinAttempts >= 5) {
                     const lockTime = Date.now() + (10 * 60 * 1000);
                     localStorage.setItem(STORAGE_KEYS.pinLockUntil, lockTime.toString());
-                    err.textContent = `Locked for 10 minutes`;
+                    err.textContent = `🔒 Locked for 10 minutes`;
                     pinAttempts = 0;
                     localStorage.setItem(STORAGE_KEYS.pinAttempts, '0');
                     clearPinInputs();
                     return;
                 }
                 
-                err.textContent = `Wrong PIN (${5 - pinAttempts} attempts left)`;
+                err.textContent = `❌ Wrong PIN (${5 - pinAttempts} attempts left)`;
                 clearPinInputs();
                 document.getElementById('pin1')?.focus();
             }
         }
     } catch (e) {
         console.error('PIN error:', e);
-        err.textContent = e.message || 'Error occurred';
+        err.textContent = e.message || '❌ Error occurred';
     }
 }
 
 function forgotPin() {
-    if (confirm('Reset vault? This will erase all data. Continue?')) {
+    if (confirm('⚠️ Reset vault? This will erase ALL passwords and documents. Continue?')) {
         vault.resetPin();
+        
+        // Also clear document vault if exists
+        if (window.documentVault && window.documentVault.db) {
+            window.documentVault.db.documents.clear();
+            window.documentVault.documents = [];
+        }
+        
         closePinModal();
         lockVault();
         
@@ -200,10 +237,17 @@ function forgotPin() {
         setupBtn.textContent = '🔐 Set PIN';
         setupBtn.onclick = () => showPinModal('setup');
         
-        Utils.showToast('Vault reset');
+        // Update biometric state
+        if (window.biometric) {
+            window.biometric.isEnabled = false;
+            localStorage.removeItem('biometric_enabled');
+            localStorage.removeItem('bio_credential_id');
+            localStorage.removeItem('bio_encrypted_pin');
+        }
+        
+        Utils.showToast('🗑️ Vault reset complete');
     }
 }
-
 // ==================== VAULT LOCK/UNLOCK ====================
 function unlockVault() {
     console.log('🔓 Unlocking vault');
