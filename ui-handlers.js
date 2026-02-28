@@ -70,7 +70,7 @@ function clearPinInputs() {
 function showPinModal(mode) {
     pinModalMode = mode;
     const title = document.getElementById('pinModalTitle');
-    const desc = documentDocumentById('pinModalDescription');
+    const desc = document.DocumentById('pinModalDescription');
     const forgotLink = document.getElementById('forgotPinLink');
     const pinInputs = document.querySelector('.pin-inputs');
     
