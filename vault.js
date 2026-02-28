@@ -266,7 +266,7 @@ class PasswordVault {
     }
 
     async updatePassword(id, updates) {
-        const index = this.passwords.findIndex(p => p.id === id);
+        const index = this.passwords.findIndex(p => String(p.id) === String(normalizedId));
         if (index === -1) throw new Error('Password not found');
 
         const entry = { ...this.passwords[index], ...updates, updated: new Date().toISOString() };
