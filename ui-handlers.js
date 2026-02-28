@@ -70,9 +70,10 @@ function clearPinInputs() {
 function showPinModal(mode) {
     pinModalMode = mode;
     const title = document.getElementById('pinModalTitle');
-    const desc = document.DocumentById('pinModalDescription');
+    const desc = document.getElementById('pinModalDescription');
     const forgotLink = document.getElementById('forgotPinLink');
     const pinInputs = document.querySelector('.pin-inputs');
+}
     
     // Clear any existing custom buttons
     const actions = document.querySelector('.pin-actions');
