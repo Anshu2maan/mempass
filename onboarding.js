@@ -1,68 +1,16 @@
-// onboarding.js - Fully Updated, Crash-Proof, Mobile-Friendly Onboarding for MemPass
+// onboarding.js - Fully Crash-Proof & Updated Version
 const Onboarding = {
     steps: [
-        {
-            element: '.logo',
-            title: 'Welcome to MemPass! 🔐',
-            content: 'Your 100% offline, privacy-first password & document vault. Everything stays on your device.',
-            position: 'bottom',
-            placement: 'centered' // special for logo
-        },
-        {
-            element: '#masterPhrase',
-            title: 'Your Master Phrase 🎯',
-            content: 'This is the **only secret** you need to remember. All passwords are generated from it – no cloud, no recovery needed.',
-            position: 'bottom'
-        },
-        {
-            element: '#serviceName',
-            title: 'Service / Website Name 🌐',
-            content: 'Type any service (gmail, netflix, bank, etc.) to get a unique, strong password every time.',
-            position: 'bottom'
-        },
-        {
-            element: '#passwordLength, #version',
-            title: 'Customize Your Password',
-            content: 'Choose length (16 is strong & recommended) and version number for easy rotation when needed.',
-            position: 'right'
-        },
-        {
-            element: '#generatePasswordBtn',
-            title: 'Generate Secure Password ✨',
-            content: 'Click here → see your password instantly. Copy or save it to the vault.',
-            position: 'top'
-        },
-        {
-            element: '#savePasswordBtn',
-            title: 'Save to Vault 🔒',
-            content: 'Save passwords securely. They’ll be encrypted with your 6-digit PIN.',
-            position: 'top'
-        },
-        {
-            element: '#unlockVaultBtn, #setupPinBtn',
-            title: 'Unlock with PIN',
-            content: 'Set or enter your 6-digit PIN to access saved passwords & documents. Forgotten PIN? Use export backup.',
-            position: 'bottom'
-        },
-        {
-            element: '#showDocumentsTab',
-            title: 'Document Vault 📁',
-            content: 'Store Aadhaar, PAN, Passport, etc. Encrypted files, expiry alerts, search – all local.',
-            position: 'top'
-        },
-        {
-            element: '#themeToggleBtn',
-            title: 'Dark/Light Mode 🌓',
-            content: 'Toggle theme anytime. Your preference is saved.',
-            position: 'left'
-        },
-        {
-            element: null, // floating final step
-            title: 'You\'re All Set! 🚀',
-            content: 'Start generating & storing securely. Your data never leaves your device.<br><br>Enjoy MemPass!',
-            position: 'centered',
-            isFinal: true
-        }
+        { element: '.logo', title: 'Welcome to MemPass! 🔐', content: 'Your 100% offline, privacy-first password & document vault.', position: 'bottom', placement: 'centered' },
+        { element: '#masterPhrase', title: 'Your Master Phrase 🎯', content: 'This is the only secret you need to remember.', position: 'bottom' },
+        { element: '#serviceName', title: 'Service / Website Name 🌐', content: 'Type any service to get a unique password.', position: 'bottom' },
+        { element: '#passwordLength, #version', title: 'Customize Your Password', content: 'Choose length (16 recommended) and version.', position: 'right' },
+        { element: '#generatePasswordBtn', title: 'Generate Secure Password ✨', content: 'Click to generate. Copy or save.', position: 'top' },
+        { element: '#savePasswordBtn', title: 'Save to Vault 🔒', content: 'Save passwords encrypted with your PIN.', position: 'top' },
+        { element: '#unlockVaultBtn, #setupPinBtn', title: 'Unlock with PIN', content: 'Set/enter 6-digit PIN to access vault.', position: 'bottom' },
+        { element: '#showDocumentsTab', title: 'Document Vault 📁', content: 'Store documents securely with expiry alerts.', position: 'top' },
+        { element: '#themeToggleBtn', title: 'Dark/Light Mode 🌓', content: 'Toggle theme anytime.', position: 'left' },
+        { element: null, title: 'You\'re All Set! 🚀', content: 'Start using MemPass securely!<br><br>Enjoy!', position: 'centered', isFinal: true }
     ],
 
     currentStep: -1,
@@ -72,8 +20,8 @@ const Onboarding = {
 
     init() {
         if (localStorage.getItem('mempass_tour_seen') === 'true') return;
-        // Delay badha diya taaki sab elements load ho jayein (vault locked hone pe bhi crash na ho)
-        setTimeout(() => this.start(), 3500); // 3.5 seconds wait
+        // Zyada delay taaki locked vault elements bhi load ho sakein
+        setTimeout(() => this.start(), 4500);
     },
 
     start() {
@@ -99,16 +47,14 @@ const Onboarding = {
         if (step.element) {
             const target = document.querySelector(step.element);
             if (!target) {
-                // Element nahi mila (jaise locked vault mein hidden tab) → auto skip
-                console.warn(`Tour step skipped: Element not found → ${step.element}`);
-                return this.next();
+                console.warn(`Tour skipped step ${index + 1}: Element missing → ${step.element}`);
+                return this.next(); // crash avoid – auto next
             }
 
             this.highlightElement(target);
             this.positionTooltip(step, target);
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
-            // Floating centered tooltip (last step)
             this.positionCenteredTooltip(step);
         }
 
@@ -139,12 +85,12 @@ const Onboarding = {
         this.tooltip.innerHTML = `
             <div class="tour-header">
                 <h3 id="tour-title">${step.title}</h3>
-                <button class="tour-close" aria-label="Close tour" onclick="Onboarding.finish()">×</button>
+                <button class="tour-close" aria-label="Close" onclick="Onboarding.finish()">×</button>
             </div>
             <div class="tour-content">${step.content}</div>
             <div class="tour-footer">
                 <div class="tour-progress">
-                    ${Array(this.steps.length).fill().map((_, i) =>
+                    ${Array(this.steps.length).fill().map((_, i) => 
                         `<span class="${i === index ? 'active' : ''}"></span>`
                     ).join('')}
                 </div>
@@ -161,7 +107,6 @@ const Onboarding = {
         document.body.appendChild(this.tooltip);
         this.tooltip.focus();
 
-        // Keyboard support
         this.tooltip.addEventListener('keydown', e => {
             if (e.key === 'Enter') this.next();
             if (e.key === 'Escape') this.finish();
@@ -169,8 +114,10 @@ const Onboarding = {
     },
 
     positionTooltip(step, target) {
+        if (!target) return; // extra safety
+
         const rect = target.getBoundingClientRect();
-        const tooltipRect = this.tooltip.getBoundingClientRect();
+        let tooltipRect = this.tooltip.getBoundingClientRect(); // may be zero first time
         const scrollY = window.scrollY;
         const scrollX = window.scrollX;
 
@@ -183,7 +130,7 @@ const Onboarding = {
                 this.tooltip.style.transform = 'translateX(-50%)';
                 break;
             case 'top':
-                top = rect.top + scrollY - tooltipRect.height - 16;
+                top = rect.top + scrollY - (tooltipRect.height || 200) - 16;
                 left = rect.left + scrollX + (rect.width / 2);
                 this.tooltip.style.transform = 'translateX(-50%)';
                 break;
@@ -194,12 +141,12 @@ const Onboarding = {
                 break;
             case 'left':
                 top = rect.top + scrollY + (rect.height / 2);
-                left = rect.left + scrollX - tooltipRect.width - 16;
+                left = rect.left + scrollX - (tooltipRect.width || 300) - 16;
                 this.tooltip.style.transform = 'translateY(-50%)';
                 break;
             case 'centered':
-                top = (window.innerHeight - tooltipRect.height) / 2 + scrollY;
-                left = (window.innerWidth - tooltipRect.width) / 2 + scrollX;
+                top = (window.innerHeight - (tooltipRect.height || 300)) / 2 + scrollY;
+                left = (window.innerWidth - (tooltipRect.width || 340)) / 2 + scrollX;
                 this.tooltip.style.transform = 'none';
                 break;
         }
@@ -207,16 +154,12 @@ const Onboarding = {
         this.tooltip.style.top = `${top}px`;
         this.tooltip.style.left = `${left}px`;
 
-        // Overflow handling (mobile pe sahi rahe)
+        // Final adjustment after render
         requestAnimationFrame(() => {
-            const currentRect = this.tooltip.getBoundingClientRect();
-            if (currentRect.left < 10) this.tooltip.style.left = '10px';
-            if (currentRect.right > window.innerWidth - 10) {
-                this.tooltip.style.left = `${window.innerWidth - currentRect.width - 10}px`;
-            }
-            if (currentRect.bottom > window.innerHeight - 10) {
-                // Agar bottom overflow ho to top pe shift kar do
-                this.tooltip.style.top = `${window.innerHeight - currentRect.height - 10}px`;
+            tooltipRect = this.tooltip.getBoundingClientRect();
+            if (tooltipRect.left < 10) this.tooltip.style.left = '10px';
+            if (tooltipRect.right > window.innerWidth - 10) {
+                this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
             }
         });
     },
@@ -250,15 +193,11 @@ const Onboarding = {
         this.removeTooltip();
         if (this.overlay) this.overlay.remove();
         localStorage.setItem('mempass_tour_seen', 'true');
-
         if (typeof Utils !== 'undefined' && Utils.showToast) {
             Utils.showToast('Welcome aboard! Let’s get secure 🔐', 4000);
         }
     }
 };
 
-// Global access
 window.Onboarding = Onboarding;
-
-// Start when DOM ready
 document.addEventListener('DOMContentLoaded', () => Onboarding.init());
