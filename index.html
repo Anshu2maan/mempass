@@ -361,6 +361,50 @@
             </div>
         </div>
 
+<!-- 🔥 NEW: Save Password Modal (Cool & Smooth) -->
+<div class="modal" id="savePasswordModal">
+    <div class="modal-content" style="max-width: 460px;">
+        <h2 style="text-align:center;margin-bottom:20px;">💾 Save to Vault</h2>
+        
+        <div class="input-group">
+            <label>Service</label>
+            <input type="text" id="saveService" readonly style="background:#f1f5f9;color:#64748b;">
+        </div>
+
+        <div class="input-group">
+            <label>Username / Email</label>
+            <input type="text" id="saveUsername" placeholder="you@example.com" autocomplete="off">
+        </div>
+
+        <div class="input-group">
+            <label>Generated Password</label>
+            <div class="password-container">
+                <input type="text" id="savePasswordField" readonly style="font-family:monospace;letter-spacing:1px;">
+                <button id="modalCopyBtn" class="copy-btn" style="padding:8px 12px;">📋</button>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Notes (optional)</label>
+            <textarea id="saveNotes" rows="3" placeholder="Work account • 2FA enabled • etc."></textarea>
+        </div>
+
+        <div class="input-group" style="margin:15px 0;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="saveFavorite">
+                <span>⭐ Mark as Favorite</span>
+            </label>
+        </div>
+
+        <div class="modal-actions">
+            <button id="confirmSaveBtn" style="background:linear-gradient(135deg,#48bb78,#38a169);">
+                💾 Save Password
+            </button>
+            <button id="cancelSaveBtn" style="background:#718096;">Cancel</button>
+        </div>
+    </div>
+</div>
+        
         <!-- Footer with Features -->
         <footer>
             <div class="features">
