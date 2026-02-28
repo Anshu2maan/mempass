@@ -89,8 +89,7 @@ class PasswordVault {
             
             this.key = derivedKey;
             
-            // FIXED: Decrypt all passwords after successful verification
-            await this.decryptVault();
+            // REMOVED: decryptVault() - We now decrypt on demand
             
             return true;
         } catch (err) {
@@ -101,28 +100,8 @@ class PasswordVault {
     }
 
     async decryptVault() {
-        if (!this.key) throw new Error('No key available');
-        
-        for (let pwd of this.passwords) {
-            try {
-                if (pwd.password && typeof pwd.password === 'object' && pwd.password.iv) {
-                    pwd._decryptedPassword = await this.decryptField(this.key, pwd.password);
-                }
-                if (pwd.username && typeof pwd.username === 'object' && pwd.username.iv) {
-                    pwd._decryptedUsername = await this.decryptField(this.key, pwd.username);
-                }
-                if (pwd.notes && typeof pwd.notes === 'object' && pwd.notes.iv) {
-                    pwd._decryptedNotes = await this.decryptField(this.key, pwd.notes);
-                }
-            } catch (err) {
-                console.warn('Failed to decrypt password entry:', pwd.id, err);
-                // Don't throw - continue with other passwords
-            }
-        }
-        
-        if (typeof this.updateStats === 'function') {
-            this.updateStats();
-        }
+        // No longer used for bulk decryption, but kept for compatibility if needed
+        console.log('Skipping bulk decryption for security');
     }
 
     async reencryptAllPasswords() {
