@@ -113,57 +113,63 @@ const Onboarding = {
         });
     },
 
-    positionTooltip(step, target) {
+        positionTooltip(step, target) {
         if (!target) return; // extra safety
 
-        const rect = target.getBoundingClientRect();
-        let tooltipRect = this.tooltip.getBoundingClientRect(); // may be zero first time
-        const scrollY = window.scrollY;
-        const scrollX = window.scrollX;
+        try {
+            if (!target) return; // double-check
 
-        let top, left;
+            const rect = target.getBoundingClientRect();
+            let tooltipRect = this.tooltip.getBoundingClientRect(); // may be zero first time
+            const scrollY = window.scrollY;
+            const scrollX = window.scrollX;
 
-        switch (step.position) {
-            case 'bottom':
-                top = rect.bottom + scrollY + 16;
-                left = rect.left + scrollX + (rect.width / 2);
-                this.tooltip.style.transform = 'translateX(-50%)';
-                break;
-            case 'top':
-                top = rect.top + scrollY - (tooltipRect.height || 200) - 16;
-                left = rect.left + scrollX + (rect.width / 2);
-                this.tooltip.style.transform = 'translateX(-50%)';
-                break;
-            case 'right':
-                top = rect.top + scrollY + (rect.height / 2);
-                left = rect.right + scrollX + 16;
-                this.tooltip.style.transform = 'translateY(-50%)';
-                break;
-            case 'left':
-                top = rect.top + scrollY + (rect.height / 2);
-                left = rect.left + scrollX - (tooltipRect.width || 300) - 16;
-                this.tooltip.style.transform = 'translateY(-50%)';
-                break;
-            case 'centered':
-                top = (window.innerHeight - (tooltipRect.height || 300)) / 2 + scrollY;
-                left = (window.innerWidth - (tooltipRect.width || 340)) / 2 + scrollX;
-                this.tooltip.style.transform = 'none';
-                break;
-        }
+            let top, left;
 
-        this.tooltip.style.top = `${top}px`;
-        this.tooltip.style.left = `${left}px`;
-
-        // Final adjustment after render
-        requestAnimationFrame(() => {
-            tooltipRect = this.tooltip.getBoundingClientRect();
-            if (tooltipRect.left < 10) this.tooltip.style.left = '10px';
-            if (tooltipRect.right > window.innerWidth - 10) {
-                this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
+            switch (step.position) {
+                case 'bottom':
+                    top = rect.bottom + scrollY + 16;
+                    left = rect.left + scrollX + (rect.width / 2);
+                    this.tooltip.style.transform = 'translateX(-50%)';
+                    break;
+                case 'top':
+                    top = rect.top + scrollY - (tooltipRect.height || 200) - 16;
+                    left = rect.left + scrollX + (rect.width / 2);
+                    this.tooltip.style.transform = 'translateX(-50%)';
+                    break;
+                case 'right':
+                    top = rect.top + scrollY + (rect.height / 2);
+                    left = rect.right + scrollX + 16;
+                    this.tooltip.style.transform = 'translateY(-50%)';
+                    break;
+                case 'left':
+                    top = rect.top + scrollY + (rect.height / 2);
+                    left = rect.left + scrollX - (tooltipRect.width || 300) - 16;
+                    this.tooltip.style.transform = 'translateY(-50%)';
+                    break;
+                case 'centered':
+                    top = (window.innerHeight - (tooltipRect.height || 300)) / 2 + scrollY;
+                    left = (window.innerWidth - (tooltipRect.width || 340)) / 2 + scrollX;
+                    this.tooltip.style.transform = 'none';
+                    break;
             }
-        });
-    },
 
+            this.tooltip.style.top = `${top}px`;
+            this.tooltip.style.left = `${left}px`;
+
+            // Final adjustment after render
+            requestAnimationFrame(() => {
+                tooltipRect = this.tooltip.getBoundingClientRect();
+                if (tooltipRect.left < 10) this.tooltip.style.left = '10px';
+                if (tooltipRect.right > window.innerWidth - 10) {
+                    this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
+                }
+            });
+        } catch (error) {
+            console.warn('Tour positioning failed:', error);
+            this.positionCenteredTooltip(step); // Fallback to centered if error
+        }
+    },
     positionCenteredTooltip(step) {
         this.tooltip.style.position = 'fixed';
         this.tooltip.style.top = '50%';
