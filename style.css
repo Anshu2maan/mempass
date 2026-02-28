@@ -1381,3 +1381,77 @@ footer {
         right: 5%;
     }
 }
+
+
+/* PIN Modal Enhancements */
+#pinModal .modal-content {
+    max-width: 400px;
+}
+
+#pinModal .pin-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+#pinModal .pin-actions button {
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+#pinModal .pin-actions button:hover {
+    transform: translateY(-2px);
+}
+
+#modalSetPinBtn {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    font-weight: 600;
+}
+
+#modalUnlockBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+}
+
+#modalBioBtn {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    font-weight: 600;
+}
+
+#closePinModalBtn {
+    background: #718096;
+    color: white;
+    margin-top: 5px;
+}
+
+#pinModal #forgotPinLink {
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    color: #f56565;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+#pinModal #forgotPinLink:hover {
+    text-decoration: underline;
+}
+
+/* Success message animation */
+#pinSuccess {
+    animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
