@@ -248,7 +248,7 @@ window.closePinModal = closePinModal;
 window.verifyPin = verifyPin;
 
 // ────────────────────────────────────────────────
-// Service Worker – Correct registration for GitHub Pages /mempass/ subfolder
+// Service Worker – ONLY THIS ONE (subfolder /mempass/ ke liye)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         const swPath = '/mempass/sw.js';
@@ -261,9 +261,17 @@ if ('serviceWorker' in navigator) {
             .catch(err => {
                 console.error('❌ Service Worker registration failed:', err);
             });
+
+        // Purane galat registrations ko forcefully unregister karo (ek baar ke liye)
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(reg => {
+                if (reg.scope === 'https://anshu2maan.github.io/' || reg.scope.includes('/sw.js')) {
+                    reg.unregister();
+                    console.log('Old conflicting SW unregistered');
+                }
+            });
+        });
     });
-} else {
-    console.warn('Service Worker not supported in this browser');
 }
 window.forgotPin = forgotPin;
 window.exportVault = exportVault;
