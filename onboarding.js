@@ -1,7 +1,7 @@
-// onboarding.js - Fully Crash-Proof & Updated Version
+// onboarding.js - Fully Crash-Proof & Updated Version (Fixed Feb 2025)
 const Onboarding = {
     steps: [
-        { element: '.logo', title: 'Welcome to MemPass! 🔐', content: 'Your 100% offline, privacy-first password & document vault.', position: 'bottom', placement: 'centered' },
+        { element: '.logo', title: 'Welcome to MemPass! 🔐', content: 'Your 100% offline, privacy-first password & document vault.', position: 'bottom' },
         { element: '#masterPhrase', title: 'Your Master Phrase 🎯', content: 'This is the only secret you need to remember.', position: 'bottom' },
         { element: '#serviceName', title: 'Service / Website Name 🌐', content: 'Type any service to get a unique password.', position: 'bottom' },
         { element: '#passwordLength, #version', title: 'Customize Your Password', content: 'Choose length (16 recommended) and version.', position: 'right' },
@@ -20,8 +20,8 @@ const Onboarding = {
 
     init() {
         if (localStorage.getItem('mempass_tour_seen') === 'true') return;
-        // Zyada delay taaki locked vault elements bhi load ho sakein
-        setTimeout(() => this.start(), 4500);
+        // Increased delay to ensure all UI elements (including conditional ones) are rendered
+        setTimeout(() => this.start(), 6000);
     },
 
     start() {
@@ -44,26 +44,36 @@ const Onboarding = {
         this.removeHighlight();
         this.removeTooltip();
 
+        let target = null;
+
         if (step.element) {
-            const target = document.querySelector(step.element);
+            target = document.querySelector(step.element);
             if (!target) {
                 console.warn(`Tour skipped step ${index + 1}: Element missing → ${step.element}`);
-                return this.next(); // crash avoid – auto next
+                return this.next(); // auto skip to avoid stuck tour
             }
-
             this.highlightElement(target);
-            this.positionTooltip(step, target);
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-            this.positionCenteredTooltip(step);
         }
 
+        // 1. Pehle tooltip banao
         this.createTooltip(step, index);
+
+        // 2. Phir position set karo (tooltip ab exist karta hai)
+        if (target && this.tooltip) {
+            this.positionTooltip(step, target);
+        } else if (this.tooltip) {
+            this.positionCenteredTooltip(step);
+        } else {
+            console.warn(`Cannot position step ${index + 1}: tooltip not created`);
+        }
     },
 
     highlightElement(target) {
-        target.classList.add('tour-highlight');
-        this.highlighted = target;
+        if (target) {
+            target.classList.add('tour-highlight');
+            this.highlighted = target;
+        }
     },
 
     removeHighlight() {
@@ -75,7 +85,7 @@ const Onboarding = {
 
     createTooltip(step, index) {
         this.tooltip = document.createElement('div');
-        this.tooltip.className = `tour-tooltip tour-${step.position}`;
+        this.tooltip.className = `tour-tooltip tour-${step.position || 'centered'}`;
         this.tooltip.setAttribute('role', 'dialog');
         this.tooltip.setAttribute('aria-labelledby', 'tour-title');
         this.tooltip.setAttribute('tabindex', '-1');
@@ -85,7 +95,7 @@ const Onboarding = {
         this.tooltip.innerHTML = `
             <div class="tour-header">
                 <h3 id="tour-title">${step.title}</h3>
-                <button class="tour-close" aria-label="Close" onclick="Onboarding.finish()">×</button>
+                <button class="tour-close" aria-label="Close tour" onclick="Onboarding.finish()">×</button>
             </div>
             <div class="tour-content">${step.content}</div>
             <div class="tour-footer">
@@ -113,14 +123,15 @@ const Onboarding = {
         });
     },
 
-        positionTooltip(step, target) {
-        if (!target) return; // extra safety
+    positionTooltip(step, target) {
+        if (!target || !this.tooltip) {
+            console.warn('positionTooltip: missing target or tooltip');
+            return;
+        }
 
         try {
-            if (!target) return; // double-check
-
             const rect = target.getBoundingClientRect();
-            let tooltipRect = this.tooltip.getBoundingClientRect(); // may be zero first time
+            let tooltipRect = this.tooltip.getBoundingClientRect();
             const scrollY = window.scrollY;
             const scrollX = window.scrollX;
 
@@ -133,7 +144,7 @@ const Onboarding = {
                     this.tooltip.style.transform = 'translateX(-50%)';
                     break;
                 case 'top':
-                    top = rect.top + scrollY - (tooltipRect.height || 200) - 16;
+                    top = rect.top + scrollY - (tooltipRect.height || 220) - 16;
                     left = rect.left + scrollX + (rect.width / 2);
                     this.tooltip.style.transform = 'translateX(-50%)';
                     break;
@@ -144,38 +155,53 @@ const Onboarding = {
                     break;
                 case 'left':
                     top = rect.top + scrollY + (rect.height / 2);
-                    left = rect.left + scrollX - (tooltipRect.width || 300) - 16;
+                    left = rect.left + scrollX - (tooltipRect.width || 320) - 16;
                     this.tooltip.style.transform = 'translateY(-50%)';
                     break;
                 case 'centered':
                     top = (window.innerHeight - (tooltipRect.height || 300)) / 2 + scrollY;
-                    left = (window.innerWidth - (tooltipRect.width || 340)) / 2 + scrollX;
+                    left = (window.innerWidth - (tooltipRect.width || 360)) / 2 + scrollX;
                     this.tooltip.style.transform = 'none';
                     break;
+                default:
+                    // fallback
+                    this.positionCenteredTooltip(step);
+                    return;
             }
 
+            this.tooltip.style.position = 'absolute';
             this.tooltip.style.top = `${top}px`;
             this.tooltip.style.left = `${left}px`;
 
-            // Final adjustment after render
+            // Adjust if out of viewport
             requestAnimationFrame(() => {
+                if (!this.tooltip) return;
                 tooltipRect = this.tooltip.getBoundingClientRect();
                 if (tooltipRect.left < 10) this.tooltip.style.left = '10px';
                 if (tooltipRect.right > window.innerWidth - 10) {
                     this.tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
                 }
+                if (tooltipRect.top < 10) this.tooltip.style.top = '10px';
             });
         } catch (error) {
             console.warn('Tour positioning failed:', error);
-            this.positionCenteredTooltip(step); // Fallback to centered if error
+            if (this.tooltip) this.positionCenteredTooltip(step);
         }
     },
+
     positionCenteredTooltip(step) {
+        if (!this.tooltip) {
+            console.warn('positionCenteredTooltip: tooltip missing');
+            return;
+        }
+
         this.tooltip.style.position = 'fixed';
         this.tooltip.style.top = '50%';
         this.tooltip.style.left = '50%';
         this.tooltip.style.transform = 'translate(-50%, -50%)';
         this.tooltip.style.maxWidth = '90%';
+        this.tooltip.style.maxHeight = '85vh';
+        this.tooltip.style.overflowY = 'auto';
         this.tooltip.style.zIndex = '10001';
     },
 
