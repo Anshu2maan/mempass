@@ -1,4 +1,4 @@
-// biometric.js - FIXED VERSION
+// biometric.js - COMPLETE FIXED VERSION with PIN check
 // Simple Biometric Authentication
 
 class BiometricAuth {
@@ -61,40 +61,79 @@ class BiometricAuth {
 
             const bioBtn = document.createElement('button');
             bioBtn.id = 'bioAuthBtn';
-            bioBtn.innerHTML = this.isEnabled ? '📱 Use Fingerprint' : '📱 Enable Biometric';
-            bioBtn.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+            
+            // Check if PIN is set
+            const isPinSet = this.vault && this.vault.settings && this.vault.settings.saltB64;
+            
+            if (!isPinSet) {
+                // PIN set nahi hai - button disabled
+                bioBtn.innerHTML = '🔐 Set PIN First';
+                bioBtn.style.background = 'linear-gradient(135deg, #a0aec0 0%, #718096 100%)';
+                bioBtn.style.opacity = '0.7';
+                bioBtn.style.cursor = 'not-allowed';
+                bioBtn.title = 'Please set a PIN first using the "Set PIN" button';
+                bioBtn.onclick = (e) => {
+                    e.preventDefault();
+                    Utils.showToast('Please set a PIN first', 3000);
+                    // Close PIN modal and highlight Set PIN button
+                    closePinModal();
+                    setTimeout(() => {
+                        document.getElementById('setupPinBtn')?.classList.add('tour-highlight');
+                        setTimeout(() => {
+                            document.getElementById('setupPinBtn')?.classList.remove('tour-highlight');
+                        }, 2000);
+                    }, 500);
+                };
+            } else {
+                // PIN set hai - normal behavior
+                bioBtn.innerHTML = this.isEnabled ? '📱 Use Fingerprint / Face ID' : '📱 Enable Biometric';
+                bioBtn.style.background = this.isEnabled 
+                    ? 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)'
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                
+                bioBtn.onclick = async (e) => {
+                    e.preventDefault();
+                    if (this.isEnabled) {
+                        await this.authenticate();
+                    } else {
+                        await this.setupBiometric();
+                    }
+                };
+            }
+            
             bioBtn.style.marginBottom = '10px';
             bioBtn.style.width = '100%';
-            
-            bioBtn.onclick = async (e) => {
-                e.preventDefault();
-                if (this.isEnabled) {
-                    await this.authenticate();
-                } else {
-                    await this.setupBiometric();
-                }
-            };
+            bioBtn.style.fontSize = '1rem';
+            bioBtn.style.padding = '12px';
             
             // Insert at top of actions
             actionsDiv.insertBefore(bioBtn, actionsDiv.firstChild);
-            console.log('📱 Biometric button added');
+            console.log('📱 Biometric button added', isPinSet ? '(PIN set)' : '(PIN not set)');
         }, 500);
     }
 
     // Setup biometric for first time
     async setupBiometric() {
         try {
+            // Double-check PIN is set
+            if (!this.vault.settings || !this.vault.settings.saltB64) {
+                Utils.showToast('❌ Set PIN first', 3000);
+                return;
+            }
+
             // Pehle PIN verify karo
             const pin = prompt('🔐 Enter your current PIN to enable biometric:');
-            if (!pin || pin.length !== 6) {
-                alert('Invalid PIN');
+            if (!pin) return; // Cancel
+            if (pin.length !== 6 || !/^\d+$/.test(pin)) {
+                alert('PIN must be exactly 6 digits');
                 return;
             }
 
             // Verify PIN
+            Utils.showToast('Verifying PIN...', 1000);
             const isValid = await this.vault.verifyPin(pin);
             if (!isValid) {
-                alert('Wrong PIN');
+                alert('❌ Wrong PIN');
                 return;
             }
 
@@ -104,6 +143,8 @@ class BiometricAuth {
 
             // Get hostname for RP ID
             const hostname = window.location.hostname || 'localhost';
+
+            Utils.showToast('🔐 Scan fingerprint...', 2000);
 
             // Create biometric credential
             const credential = await navigator.credentials.create({
@@ -149,7 +190,13 @@ class BiometricAuth {
             
             // Update button
             const btn = document.getElementById('bioAuthBtn');
-            if (btn) btn.innerHTML = '📱 Use Fingerprint';
+            if (btn) {
+                btn.innerHTML = '📱 Use Fingerprint / Face ID';
+                btn.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+            }
+            
+            // Close PIN modal
+            closePinModal();
             
             Utils.showToast('✅ Biometric enabled!', 3000);
             
@@ -162,6 +209,8 @@ class BiometricAuth {
                 message = '❌ Setup cancelled or not allowed.';
             } else if (err.name === 'NotSupportedError') {
                 message = '❌ Biometric not supported on this device.';
+            } else if (err.message) {
+                message = `❌ ${err.message}`;
             }
             
             alert(message);
@@ -179,7 +228,7 @@ class BiometricAuth {
                 return;
             }
 
-            Utils.showToast('🔐 Verify fingerprint...', 2000);
+            Utils.showToast('🔐 Verify fingerprint / face...', 2000);
 
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
@@ -272,14 +321,18 @@ class BiometricAuth {
 
     // Disable biometric
     disable() {
-        if (confirm('Disable biometric login?')) {
+        if (confirm('Disable biometric login? You can re-enable anytime.')) {
             localStorage.removeItem('biometric_enabled');
             localStorage.removeItem('bio_credential_id');
             localStorage.removeItem('bio_encrypted_pin');
             this.isEnabled = false;
             
+            // Update button if visible
             const btn = document.getElementById('bioAuthBtn');
-            if (btn) btn.innerHTML = '📱 Enable Biometric';
+            if (btn) {
+                btn.innerHTML = '📱 Enable Biometric';
+                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
             
             // Remove settings div
             const settings = document.getElementById('biometricSettings');
@@ -322,7 +375,7 @@ function addBiometricSettings() {
     // Check if already added
     if (document.getElementById('biometricSettings')) return;
     
-    // Find where to insert (after stats maybe)
+    // Find where to insert (after stats)
     const passwordContent = document.getElementById('passwordVaultContent');
     if (!passwordContent) return;
     
@@ -339,6 +392,9 @@ function addBiometricSettings() {
                 <h3 style="margin-bottom: 5px;">📱 Biometric Login</h3>
                 <p style="color: var(--text-secondary); font-size: 0.9rem;">
                     Use fingerprint or face ID to unlock
+                </p>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">
+                    ✅ Biometric is enabled
                 </p>
             </div>
             <button id="toggleBiometricBtn" class="action-btn" 
