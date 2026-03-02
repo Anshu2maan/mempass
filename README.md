@@ -1,396 +1,735 @@
-# 🔐 MemPass - Digital Vault & Password Generator
+# 🔐 MemPass - Your Personal Digital Vault
 
-**Your Offline-First, Encrypted Password Manager and Document Vault**  
-*100% Local Storage • PIN Protected • Military-Grade Encryption*
+**Store Important Documents & Passwords Securely • 100% Offline • PIN Protected**
 
 ---
 
-## 📋 Table of Contents
-- [Features](#-features)
-- [Technology Stack](#-technology-stack)
+## 📋 **Table of Contents**
+- [Overview](#-overview)
+- [What is a Digital Vault?](#-what-is-a-digital-vault)
+- [What You Can Store](#-what-you-can-store)
+- [Core Features](#-core-features)
+- [Document Vault](#-document-vault)
+- [Password Vault](#-password-vault)
+- [Password Generator](#-password-generator)
+- [Security Architecture](#-security-architecture)
+- [Technical Stack](#-technical-stack)
+- [Browser Support](#-browser-support)
 - [Installation](#-installation)
 - [Quick Start Guide](#-quick-start-guide)
-- [Detailed Usage](#-detailed-usage)
-- [Security Architecture](#-security-architecture)
-- [Encryption Details](#-encryption-details)
+- [Document Types Reference](#-document-types-reference)
+- [File Specifications](#-file-specifications)
+- [Data Management](#-data-management)
 - [Privacy Policy](#-privacy-policy)
-- [Offline Capabilities](#-offline-capabilities)
-- [Backup & Restore](#-backup--restore)
+- [Why MemPass is Different](#-why-mempass-is-different)
+- [Who Should Use MemPass](#-who-should-use-mempass)
 - [Troubleshooting](#-troubleshooting)
 - [FAQ](#-faq)
-- [File Upload Limits](#-file-upload-limits)
-- [Document Types](#-document-types)
-- [Contributing](#-contributing)
 - [License](#-license)
-- [Acknowledgements](#-acknowledgements)
 
 ---
 
-## ✨ Features
+## 📌 **Overview**
 
-### 🔐 Password Management
-- **Deterministic Password Generation** - Generate strong, unique passwords using your master phrase + service name
-- **No Cloud Storage** - All data stays on your device (IndexedDB + LocalStorage)
-- **PIN Protection** - 6-digit PIN with Argon2id key derivation
-- **Auto-Lock** - Automatically locks after 5 minutes (90 seconds for inactivity)
-- **Password Strength Meter** - Visual feedback with estimated cracking time
-- **Search & Sort** - Find passwords quickly with live search
-- **Favorites** - Mark important passwords
-- **Version Control** - Password rotation with version numbers
+MemPass is a privacy-first, offline digital vault that runs entirely in your browser. Just like a bank locker where you keep your valuables, MemPass is where you keep your digital valuables - all on your device, under your control.
 
-### 📁 Document Vault
-- **Encrypted Document Storage** - Store images, PDFs, and other files
-- **Multiple Document Types** - Aadhar Card, PAN Card, Voter ID, Passport, Driving License, Other
-- **Metadata Fields** - Type-specific fields (document numbers, dates, etc.)
-- **File Previews** - View images and PDFs directly in the app
-- **Expiry Notifications** - Get alerts for expiring documents
-- **Thumbnail Generation** - Quick visual identification
-- **Document Search** - Search by title, type, tags, or notes
-
-### 🛡️ Security Features
-- **Zero-Knowledge Architecture** - We never see your data
-- **AES-256-GCM** - Industry-standard encryption
-- **Argon2id** - Memory-hard key derivation
-- **PBKDF2 for Export** - Additional layer for encrypted backups
-- **No Network Requests** - All operations are local
-- **PIN Attempt Limiting** - 5 attempts, then 10-minute lockout
-
-### 🎨 User Experience
-- **Dark/Light Mode** - Theme toggle with persistent preference
-- **Responsive Design** - Works on mobile, tablet, and desktop
-- **Toast Notifications** - User-friendly feedback messages
-- **Export/Import** - Encrypted backups with password protection
+**No cloud. No servers. No tracking. Just you and your data.**
 
 ---
 
-## 🛠️ Technology Stack
+## 🏦 **What is a Digital Vault?**
 
-### Frontend
-- **HTML5** - Semantic markup
+| Real World | Digital World |
+|------------|---------------|
+| Bank locker | 🔐 MemPass |
+| Important papers | 📄 Digital documents |
+| Jewellery | 🔑 Passwords (as valuable) |
+| Will/agreements | 📝 Private notes |
+| Family photos | 🖼️ Scanned memories |
+
+Just as you wouldn't leave your locker keys with anyone else, MemPass ensures your digital valuables stay with you - encrypted, protected, and completely private.
+
+---
+
+## 📦 **What You Can Store**
+
+| Category | Examples |
+|----------|----------|
+| **Government IDs** | Aadhar Card, PAN Card, Voter ID, Passport, Driving License |
+| **Personal Documents** | Birth certificates, Marriage certificates, Educational documents, Property papers |
+| **Passwords** | Email accounts, Social media, Banking, Shopping sites |
+| **Private Notes** | PIN codes, WiFi passwords, Locker combinations, Reminders, Ideas |
+
+**Everything in one place. Everything encrypted. Everything yours.**
+
+---
+
+## ✨ **Core Features**
+
+### 🔐 **Security First**
+| Feature | Details |
+|---------|---------|
+| **PIN Protection** | 6-digit PIN - easy to remember, hard to crack |
+| **Military-grade Encryption** | AES-256-GCM (same standard used by banks) |
+| **Advanced Key Derivation** | Argon2id - resistant to hacking attempts |
+| **Auto-Lock** | Locks automatically when not in use |
+| **Attempt Limiting** | 5 wrong tries = 10 minute lockout |
+| **Zero Network** | No internet requests = complete privacy |
+
+### 📁 **Document Vault**
+| Feature | Details |
+|---------|---------|
+| **Indian Document Templates** | 6 built-in types with pre-filled fields |
+| **File Support** | Images (JPEG, PNG) and PDF documents |
+| **Expiry Tracking** | Get reminders for expiring documents |
+| **File Previews** | View images and PDFs directly |
+| **Search** | Find documents by title, type, or notes |
+| **Favorites** | Star important documents |
+| **Notes Field** | Add extra info to any document |
+
+### 🔑 **Password Vault**
+| Feature | Details |
+|---------|---------|
+| **Secure Storage** | All passwords encrypted |
+| **Search & Sort** | Find passwords instantly |
+| **Statistics** | Track total, recent, and duplicates |
+| **Notes Field** | Add context to each password |
+
+### ⚡ **Password Generator**
+| Feature | Details |
+|---------|---------|
+| **Deterministic** | Same inputs = same password (never forget!) |
+| **Customizable** | Length, version, character sets |
+| **Strength Meter** | See how secure your password is |
+| **Copy to Clipboard** | One-click copy |
+
+---
+
+## 📁 **Document Vault**
+
+### Built-in Indian Document Types
+
+| Document | Icon | Fields | Files |
+|----------|------|--------|-------|
+| **Aadhar Card** | 🆔 | Number, Name, DOB, Gender, Address | 2 max |
+| **PAN Card** | 📄 | Number, Name, Father's Name, DOB | 1 max |
+| **Voter ID** | 🗳️ | EPIC Number, Name, Father's Name, Address | 2 max |
+| **Passport** | 🛂 | Number, Name, DOB, Issue/Expiry, Place | 2 max |
+| **Driving License** | 🚗 | Number, Name, DOB, Issue/Expiry, Vehicle Class | 2 max |
+| **Other Document** | 📁 | Number, Title, Issue/Expiry | 5 max |
+
+### Document Fields by Type
+
+| Document Type | Available Fields |
+|--------------|------------------|
+| **Aadhar Card** | Document Number, Full Name, Date of Birth, Gender, Address |
+| **PAN Card** | PAN Number, Name, Father's Name, Date of Birth |
+| **Voter ID** | EPIC Number, Name, Father's Name, Address |
+| **Passport** | Passport Number, Name, Date of Birth, Issue Date, Expiry Date, Place of Issue |
+| **Driving License** | License Number, Name, Date of Birth, Issue Date, Expiry Date, Vehicle Classes |
+| **Other Document** | Document Number, Title, Issue Date, Expiry Date (optional) |
+
+### Notes Field
+Every document has a **notes field** separate from its metadata. Use it for:
+- Reminders about the document
+- Where you used it
+- Any additional context
+
+### Expiry Tracking
+| Document | Expiry Tracking |
+|----------|----------------|
+| Passport | ✅ Yes (30-day warning) |
+| Driving License | ✅ Yes (30-day warning) |
+| Other Document | ✅ Yes (if expiry date filled) |
+| Aadhar Card | ❌ No |
+| PAN Card | ❌ No |
+| Voter ID | ❌ No |
+
+### Search Functionality
+- Searches: document title, document type, notes, tags
+- Find anything instantly as you type
+
+### File Previews
+- **Images:** Displayed directly in the app
+- **PDFs:** View in browser or download
+- **Other files:** Download option only
+
+---
+
+## 🔑 **Password Vault**
+
+### What Gets Stored
+For each password entry, you can save:
+- **Service name** (e.g., "Gmail", "Facebook", "Bank of India")
+- **Username/Email** (encrypted)
+- **Password** (encrypted)
+- **Notes** (encrypted, optional)
+
+### Search & Sort
+- **Search:** By service, username, or notes
+- **Sort:** Newest, oldest, service name, most used
+
+### Statistics
+- **Total passwords** - How many you've saved
+- **Recent** - Added in last 30 days
+- **Duplicates** - Same service+username combinations
+
+---
+
+## 🔄 **Password Generator**
+
+### How It Works
+The generator creates passwords using HMAC-SHA256:
+
+```
+password = HMAC-SHA256(master phrase, service + ":" + version)
+```
+
+**What this means:**
+- Same inputs always = same password
+- Never need to remember complex passwords
+- Change version number to rotate passwords
+
+### Character Sets
+```javascript
+lowercase:  a b c d e f g h i j k l m n o p q r s t u v w x y z
+uppercase:  A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+digits:     0 1 2 3 4 5 6 7 8 9
+symbols:    ! @ # $ % ^ & * ( ) _ + - = [ ] { } | ; : , . < > ?
+```
+
+Every password includes **at least one character from each set**.
+
+### Password Strength
+
+| Strength | Score | Cracking Time |
+|----------|-------|---------------|
+| 🔴 Weak | < 40% | Seconds to hours |
+| 🟡 Medium | 40-70% | Days to years |
+| 🟢 Strong | > 70% | Centuries to universe age |
+
+---
+
+## 🔒 **Security Architecture**
+
+### PIN Protection
+- **6-digit PIN** (numbers only)
+- PIN is **never stored** - only the encryption key derived from it
+- Each PIN attempt uses **Argon2id** with:
+  - 4 iterations
+  - 64 MB memory
+  - 4 parallel threads
+
+### Encryption (AES-256-GCM)
+- **256-bit keys** (military grade)
+- **12-byte random IV** per encryption
+- **16-byte authentication tag** ensures data hasn't been tampered with
+
+### Attempt Limiting
+| Attempts | What Happens |
+|----------|--------------|
+| 1-4 | "Wrong PIN, X attempts left" |
+| 5 | 🔒 Locked for 10 minutes |
+| 6+ | Locked until timer expires |
+
+Lockout survives browser restart.
+
+### Auto-Lock
+- After **5 minutes** of inactivity
+- After **90 seconds** of no interaction
+- Immediately when manually locked
+
+### Queue System
+All database operations run one after another to prevent conflicts:
+- No race conditions
+- No data corruption
+- Smooth operation even with many items
+
+### Network Isolation
+**Zero network requests.** MemPass makes NO connections to any server:
+- No analytics
+- No telemetry
+- No crash reporting
+- No license checks
+- No tracking of any kind
+
+---
+
+## 🛠️ **Technical Stack**
+
+### Dependencies (Exactly Two)
+```html
+<!-- Argon2-browser - Password hashing (MIT License) -->
+<script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+
+<!-- Dexie.js - IndexedDB wrapper (Apache 2.0) -->
+<script src="https://unpkg.com/dexie@3.2.3/dist/dexie.js"></script>
+```
+
+### Browser APIs Used
+| API | Purpose |
+|-----|---------|
+| Web Crypto API | Encryption, key derivation, HMAC |
+| IndexedDB | Document and password storage |
+| localStorage | Settings, PIN attempts, theme |
+| FileReader API | Reading files for encryption |
+| Service Worker | Offline caching (optional) |
+
+### Built With
+- **Pure HTML5** - Semantic markup
 - **CSS3** - Custom properties, animations, responsive design
-- **Vanilla JavaScript** - No frameworks, lightweight (~150KB total)
-
-### Libraries
-- **[Argon2-browser](https://github.com/antelle/argon2-browser)** - Memory-hard key derivation (v1.18.0)
-- **[Dexie.js](https://dexie.org/)** - IndexedDB wrapper (v3.2.3)
-- **Web Crypto API** - Native browser cryptography
-
-### Storage
-- **IndexedDB** - Document and password storage (via Dexie)
-- **LocalStorage** - Settings, PIN attempts, export timestamps
+- **Vanilla JavaScript** - No frameworks, just clean code
 
 ---
 
-## 📦 Installation
+## 🌐 **Browser Support**
+
+Based on actual API requirements:
+
+| Browser | Minimum Version |
+|---------|-----------------|
+| **Google Chrome** | 55+ |
+| **Mozilla Firefox** | 52+ |
+| **Apple Safari** | 10.1+ |
+| **Microsoft Edge** | 79+ (Chromium) |
+| **Opera** | 42+ |
+| **Samsung Internet** | 6+ |
+| **iOS Safari** | 10.3+ |
+| **Android WebView** | 55+ |
+
+**Note:** Internet Explorer and original Edge (EdgeHTML) are not supported.
+
+---
+
+## 📦 **Installation**
 
 ### Option 1: Direct Download
-1. Download the latest release from [GitHub Releases](https://github.com/yourusername/mempass/releases)
-2. Extract the ZIP file
-3. Open `index.html` in a modern browser
-
-### Option 2: Clone Repository
 ```bash
-git clone https://github.com/yourusername/mempass.git
-cd mempass
+# Download the latest release
+# Extract ZIP file
 # Open index.html in your browser
 ```
 
-### Browser Requirements
-- Chrome 80+, Firefox 75+, Safari 13+, Edge 80+
-- Web Crypto API support
-- IndexedDB support
-- Service Workers (optional, for offline)
+### Option 2: Git Clone
+```bash
+git clone https://github.com/anshu2maan/mempass.git
+cd mempass
+# Open index.html in your browser
+# No build step required
+```
+
+### Option 3: GitHub Pages
+```bash
+# Fork the repository
+# Enable GitHub Pages in Settings
+# Access at: https://yourusername.github.io/mempass
+```
+
+### Option 4: Deploy Anywhere
+```bash
+# Upload all files to any static web server
+# Works with Apache, Nginx, Netlify, Vercel
+# No backend required
+```
 
 ---
 
-## 🏁 Quick Start Guide
+## 🏁 **Quick Start Guide**
 
-### 1. First Launch
-Open MemPass in your browser. You'll see the password generator interface.
+### Step 1: Open MemPass
+- Navigate to the app URL or open index.html
+- Interactive tour starts automatically (first time only)
 
-### 2. Set Up PIN (Required for Vault)
-1. Click **"Set PIN"** button in the Vault section
-2. Enter a **6-digit PIN** (e.g., `123456`)
-3. ✅ PIN is now set - vault is ready!
+### Step 2: Set Your PIN
+```
+1. Go to "Vault" section
+2. Click "Set PIN"
+3. Enter 6-digit PIN (e.g., 123456)
+4. Click "Unlock"
+5. ✅ Vault is ready
+```
 
-### 3. Generate Your First Password
-1. Enter a **Master Phrase** (e.g., `correct horse battery staple 42`)
-2. Enter a **Service Name** (e.g., `gmail`, `facebook`)
-3. Choose password length (12-24 recommended)
-4. Click **"Generate"**
-5. Copy the password with **"Copy to Clipboard"**
+**PIN Rules:**
+- Exactly 6 digits
+- Numbers only (0-9)
+- No special characters
 
-### 4. Save to Vault
-1. Unlock vault with your PIN
-2. Click **"Save"** button
-3. Enter username and optional notes
-4. ✅ Password saved to encrypted vault
-
-### 5. Add a Document
-1. Unlock vault
-2. Switch to **"Documents"** tab
-3. Click **"+ Add Document"**
+### Step 3: Add Your First Document
+```
+1. Enter PIN to unlock
+2. Switch to "Documents" tab
+3. Click "+ Add Document"
 4. Select document type (Aadhar, PAN, etc.)
-5. Fill in fields and upload files
-6. Click **"Save"**
+5. Fill in the fields
+6. Add optional notes
+7. Upload files (JPEG, PNG, or PDF)
+8. Click "Save"
+9. ✅ Document stored
+```
+
+### Step 4: Generate a Password
+```
+1. Enter master phrase (e.g., "my secret phrase")
+2. Enter service name (e.g., "gmail")
+3. Select length (16 recommended)
+4. Click "Generate"
+5. Copy password
+6. ✅ Password ready
+```
+
+### Step 5: Save a Password (Optional)
+```
+1. Ensure vault is unlocked
+2. After generating, click "Save"
+3. Enter username
+4. Add optional notes
+5. ✅ Password saved
+```
 
 ---
 
-## 📖 Detailed Usage
+## 📑 **Document Types Reference**
 
-### Password Generator
+### Aadhar Card
+| Field | Type | Notes |
+|-------|------|-------|
+| Aadhar Number | text | 12 digits |
+| Full Name | text | As on card |
+| Date of Birth | date | - |
+| Gender | select | Male/Female/Other |
+| Address | textarea | Complete address |
 
-#### Input Fields
-| Field | Description | Example |
-|-------|-------------|---------|
-| **Master Phrase** | Your secret phrase (never share) | `correct horse battery staple 42` |
-| **Service Name** | Website/app name | `gmail`, `facebook`, `amazon` |
-| **Password Length** | 8-24 characters | 16 (recommended) |
-| **Version** | Increment for password rotation | 1, 2, 3... |
-
-#### Password Strength
-- **Weak** (< 40%) - Easily crackable
-- **Medium** (40-70%) - Good for low-security sites
-- **Strong** (> 70%) - Suitable for banking, email
-
-### Password Vault
-
-#### Lock/Unlock
-- **Auto-lock:** After 5 minutes of inactivity
-- **PIN attempts:** 5 attempts, then 10-minute cooldown
-
-#### Managing Passwords
-- **View** - Click eye icon to reveal password
-- **Copy** - Click clipboard icon
-- **Edit** - Pencil icon to update
-- **Delete** - Trash icon (confirmation required)
-- **Search** - Live search by service, username, or notes
-- **Sort** - Newest, oldest, service name, most used
-
-#### Statistics
-- **Total Passwords** - Count of saved entries
-- **Last 30 Days** - Recently added passwords
-- **Duplicates** - Same service/username combinations
-
-### Document Vault
-
-#### Document Features
-- **Thumbnails** - Image files show previews
-- **Expiry Alerts** - Documents expiring in 30 days show warnings
-- **Favorites** - Star important documents
-- **Search** - By title, type, tags, or notes
-- **Filter** - By document type
-- **Preview** - View images/PDFs in modal
-- **Download** - Save original files
+**Limits:** 2 files, 5MB each, JPEG/PNG/PDF
 
 ---
 
-## 🔒 Security Architecture
+### PAN Card
+| Field | Type | Notes |
+|-------|------|-------|
+| PAN Number | text | Format: ABCDE1234F |
+| Name | text | As on card |
+| Father's Name | text | - |
+| Date of Birth | date | - |
 
-### Key Derivation
-- **Argon2id** parameters:
-  - Time cost: 4 iterations
-  - Memory: 64 MB
-  - Parallelism: 4 threads
-  - Output: 32 bytes (256 bits)
-
-### Encryption
-- **Algorithm:** AES-256-GCM
-- **IV:** 12 bytes random per encryption
-- **Authentication Tag:** 16 bytes
-- **Key Storage:** Never stored - derived from PIN each time
-
-### Password Generation
-- **Seed Generation:** HMAC-SHA256(master phrase, service:version)
-- **RNG:** Linear Congruential Generator
-- **Character Sets:** lowercase, uppercase, digits, symbols
-- **Guaranteed:** At least one character from each set
+**Limits:** 1 file, 3MB, JPEG/PNG/PDF
 
 ---
 
-## 🔐 Encryption Details
+### Voter ID
+| Field | Type | Notes |
+|-------|------|-------|
+| EPIC Number | text | Voter ID number |
+| Name | text | As on card |
+| Father's Name | text | - |
+| Address | textarea | As on card |
 
-### PIN-Based Encryption
-1. User enters 6-digit PIN
-2. Salt (16 bytes) retrieved from localStorage
-3. Argon2id derives 256-bit key
-4. Key used for AES-GCM encryption/decryption
-
-### Document Encryption
-1. Each file gets unique 12-byte IV
-2. File encrypted with AES-GCM
-3. Authentication tag (16 bytes) appended
-4. IV, ciphertext, tag stored separately
-5. Thumbnails generated for images
-
-### Export Encryption
-1. User provides export password
-2. Random salt (16 bytes) generated
-3. PBKDF2 with 100,000 iterations
-4. AES-GCM encrypts the JSON export
-5. Salt, IV, and ciphertext saved in export file
+**Limits:** 2 files, 3MB each, JPEG/PNG/PDF
 
 ---
 
-## 🕵️ Privacy Policy
+### Passport
+| Field | Type | Notes |
+|-------|------|-------|
+| Passport Number | text | - |
+| Name | text | As on passport |
+| Date of Birth | date | - |
+| Issue Date | date | - |
+| Expiry Date | date | Triggers warning |
+| Place of Issue | text | - |
 
-### What We Store (Locally Only)
-- Encrypted passwords (IndexedDB)
-- Encrypted documents (IndexedDB)
-- PIN salt (LocalStorage)
-- Theme preference
-- Export timestamp
-
-### What We NEVER Store
-- ❌ Master phrase
-- ❌ PIN (only derived key exists temporarily)
-- ❌ Decrypted passwords
-- ❌ Decrypted documents
-- ❌ Any personal information
-
-### Data Transmission
-- **Zero** network requests
-- **No** analytics or tracking
-- **No** cloud sync
+**Limits:** 2 files, 4MB each, JPEG/PNG/PDF  
+**Expiry alert:** 30 days before
 
 ---
 
-## 📡 Offline Capabilities
+### Driving License
+| Field | Type | Notes |
+|-------|------|-------|
+| License Number | text | - |
+| Name | text | As on license |
+| Date of Birth | date | - |
+| Issue Date | date | - |
+| Expiry Date | date | Triggers warning |
+| Vehicle Classes | text | e.g., LMV, MCWG |
 
-### Progressive Web App
-- **Service Worker** caches all assets
-- **Works offline** after first visit
-- **Installable** on mobile/desktop
-
-### Storage Limits
-- **IndexedDB:** Usually 50MB - 1GB
-- **LocalStorage:** ~5-10MB
-- **Recommendation:** Keep total files under 100MB
+**Limits:** 2 files, 3MB each, JPEG/PNG/PDF  
+**Expiry alert:** 30 days before
 
 ---
 
-## 💾 Backup & Restore
+### Other Document
+| Field | Type | Notes |
+|-------|------|-------|
+| Document Number | text | Optional |
+| Title | text | Document name |
+| Issue Date | date | Optional |
+| Expiry Date | date | Optional, triggers warning |
 
-### Export Vault
+**Limits:** 5 files, 10MB each, Images/PDF  
+**Expiry alert:** 30 days before (if date filled)
+
+---
+
+## 📊 **File Specifications**
+
+### Supported Formats
+| Format | Type | Preview |
+|--------|------|---------|
+| JPEG | image/jpeg | ✅ Full |
+| PNG | image/png | ✅ Full |
+| PDF | application/pdf | ✅ View/Download |
+
+### Size Limits by Type
+| Document Type | Per File | Total |
+|--------------|----------|-------|
+| Aadhar Card | 5 MB | 10 MB |
+| PAN Card | 3 MB | 3 MB |
+| Voter ID | 3 MB | 6 MB |
+| Passport | 4 MB | 8 MB |
+| Driving License | 3 MB | 6 MB |
+| Other | 10 MB | 50 MB |
+
+### Browser Storage Limits
+| Browser | Typical Limit |
+|---------|---------------|
+| Chrome | Up to 60% of free disk space |
+| Firefox | 50MB to 2GB (configurable) |
+| Safari | 1GB to 2GB |
+| Edge | Up to 60% of free disk space |
+
+**Recommendation:** Keep total stored files under 100MB for best performance.
+
+---
+
+## 💾 **Data Management**
+
+### Export Passwords
+```
 1. Unlock vault
-2. Click **"Export Vault"**
-3. Enter a strong password (min 8 characters)
-4. File downloads as `mempass-YYYY-MM-DD.json`
+2. Click "Export Vault"
+3. Enter password (min 8 chars)
+4. File downloads as "mempass-YYYY-MM-DD.json"
+```
 
-### Import Vault
+### Import Passwords
+```
 1. Unlock vault
-2. Click **"Import Vault"** (⚠️ replaces current data)
-3. Select exported JSON file
+2. Click "Import Vault"
+3. Select exported .json file
 4. Enter export password
-5. Data is re-encrypted with your current PIN
+5. ✅ Data imported (replaces existing)
+```
 
 ### Export Documents
-1. Unlock vault, go to Documents tab
-2. Click **"Export Documents"**
-3. Enter export password
-4. File downloads as `documents-YYYY-MM-DD.json`
+```
+1. Unlock vault
+2. Go to "Documents" tab
+3. Click "Export Documents"
+4. Enter password (min 8 chars)
+5. File downloads as "documents-YYYY-MM-DD.json"
+```
 
 ### Import Documents
+```
 1. Unlock vault
-2. Click **"Import Documents"** (adds to existing)
-3. Select exported JSON file
-4. Enter export password
-5. Documents are re-encrypted with current PIN
+2. Go to "Documents" tab
+3. Click "Import Documents"
+4. Select exported .json file
+5. Enter export password
+6. ✅ Documents added to existing
+```
+
+### Reset Vault (Forgot PIN)
+```
+1. Click "Forgot PIN?" in PIN modal
+2. Confirm reset (⚠️ ALL DATA DELETED)
+3. Set new PIN
+4. Restore from backup if available
+```
 
 ---
 
-## 🔧 Troubleshooting
+## 🔏 **Privacy Policy**
+
+### What We Store (Locally Only)
+| Data | Where | Who Can Access |
+|------|-------|----------------|
+| Documents | IndexedDB | Only you (with PIN) |
+| Passwords | IndexedDB | Only you (with PIN) |
+| PIN salt | localStorage | Only you (with PIN) |
+| Settings | localStorage | Only you |
+| Theme preference | localStorage | Only you |
+
+### What We NEVER Store
+- ❌ Your master phrase
+- ❌ Your PIN (only derived key exists temporarily)
+- ❌ Decrypted documents
+- ❌ Decrypted passwords
+- ❌ Usage analytics
+- ❌ Error logs
+- ❌ IP addresses
+- ❌ Device information
+- ❌ Browser fingerprints
+
+### Network Activity
+**Zero.** MemPass makes NO connections to any server:
+- No analytics
+- No telemetry
+- No crash reporting
+- No license checks
+- No auto-updates
+- No tracking of any kind
+
+---
+
+## 🎯 **Why MemPass is Different**
+
+| Aspect | Other Apps | MemPass |
+|--------|------------|---------|
+| **Document types** | Only 1-2 types | 6 Indian document templates |
+| **Offline access** | Often need internet | 100% offline |
+| **Encryption** | Server-side | Client-side, your key |
+| **Password manager** | Separate app | Built-in |
+| **PIN protection** | Often password only | 6-digit PIN + Argon2id |
+| **Indian focus** | Generic | Built for India |
+| **Network requests** | Many | Zero |
+| **Price** | Freemium/Paid | Completely free |
+
+**Bottom line:** MemPass isn't trying to compete with anyone. It's solving a different problem: *your personal digital vault, on your terms, built for your needs.*
+
+---
+
+## 👥 **Who Should Use MemPass**
+
+### ✅ **Perfect For You If:**
+- You want to store Aadhar/PAN/Passport securely
+- You need documents accessible offline
+- You want passwords + documents in one app
+- You prefer PIN over complex passwords
+- You care about privacy (no cloud)
+- You want something that just works, for free
+
+### ❌ **Not For You If:**
+- You need cloud sync across devices
+- You want official DigiLocker issued documents only
+- You prefer biometric authentication only
+- You need team/shared access
+- You want a mobile app from app store (it's a PWA)
+
+---
+
+## 🔧 **Troubleshooting**
 
 ### Common Issues
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| "Vault must be unlocked" | Accessing vault without unlocking | Enter PIN to unlock first |
-| "PIN must be 6 digits" | Non-numeric or wrong length | Use exactly 6 numbers |
-| "Locked for 10 minutes" | 5 failed PIN attempts | Wait 10 minutes or reset vault |
-| "File too large" | Exceeding document limits | Check limits table |
-| "Decryption failed" | Wrong PIN or corrupted data | Try correct PIN or restore backup |
-| "Database not initialized" | IndexedDB permission issue | Clear site data and reload |
+| Issue | Likely Cause | Solution |
+|-------|--------------|----------|
+| "Vault must be unlocked" | Accessing without PIN | Enter PIN first |
+| "PIN must be 6 digits" | Wrong format | Use exactly 6 numbers |
+| "Locked for 10 minutes" | 5 failed attempts | Wait 10 minutes or reset |
+| File too large | Exceeds limit | Check limits table |
+| Wrong file type | Not JPEG/PNG/PDF | Convert format |
+| "Decryption failed" | Wrong PIN/corrupt | Try correct PIN or restore |
+| Documents not showing | Queue delay | Wait or refresh |
+| Thumbnails not showing | Experimental | Icons shown as fallback |
 
-### Reset Vault
-If you forget your PIN:
-1. Click **"Forgot PIN?"** in PIN modal
-2. Confirm reset (⚠️ deletes all data)
-3. Set new PIN
-4. Restore from backup if available
+### Debug Mode
+Open browser console (F12) and run:
+```javascript
+debugVault()
+```
 
----
-
-## ❓ FAQ
-
-### Q: Is MemPass really secure?
-**A:** Yes! AES-256-GCM with Argon2id. All data stays on your device.
-
-### Q: What if I forget my master phrase?
-**A:** No recovery option - this is by design for security.
-
-### Q: Can I use on multiple devices?
-**A:** Manual export/import between devices.
-
-### Q: What if I clear browser data?
-**A:** All data will be lost. Always maintain encrypted backups!
-
-### Q: Can I recover data if I forget my PIN?
-**A:** No, unless you have an encrypted backup.
-
-### Q: Is there a mobile app?
-**A:** MemPass is a PWA - install on home screen.
-
-### Q: What is the maximum file size?
-**A:** 10MB for Other documents, 3-5MB for specific types.
+Shows:
+- Unlock status
+- Key presence
+- Password count
+- Document count
+- PIN attempts
+- Lock status
+- Last activity
 
 ---
 
-## 📁 File Upload Limits
+## ❓ **FAQ**
 
-| Document Type | Max File Size | Allowed Formats |
-|--------------|---------------|-----------------|
-| Aadhar Card | 5 MB | JPEG, PNG, PDF |
-| PAN Card | 3 MB | JPEG, PNG, PDF |
-| Voter ID | 3 MB | JPEG, PNG, PDF |
-| Passport | 4 MB | JPEG, PNG, PDF |
-| Driving License | 3 MB | JPEG, PNG, PDF |
-| Other | 10 MB | Images, PDF |
+### General Questions
+
+**Q: Is MemPass really free?**
+A: Yes, completely free. No paid tiers, no subscriptions.
+
+**Q: Can I use it on multiple devices?**
+A: Yes, through manual export/import. No cloud sync by design.
+
+**Q: What if I clear browser data?**
+A: All data lost. Always maintain encrypted backups!
+
+**Q: Can I install it as an app?**
+A: Yes, it's a PWA. On Chrome/Edge, click "Install" in address bar.
+
+### Document Storage
+
+**Q: Can I store Aadhar card?**
+A: Yes, built-in template with all required fields.
+
+**Q: What file formats are supported?**
+A: JPEG, PNG images and PDF documents only.
+
+**Q: How do expiry notifications work?**
+A: Shows warning when viewing documents expiring within 30 days.
+
+**Q: Can I add notes to documents?**
+A: Yes, every document has a notes field.
+
+**Q: Is there a storage limit?**
+A: Only browser quota. No artificial limits.
+
+### Password Management
+
+**Q: What if I forget my master phrase?**
+A: No recovery. Generate new passwords and update saved ones.
+
+**Q: Are generated passwords random?**
+A: Deterministic - same inputs = same password.
+
+**Q: Can I store existing passwords?**
+A: Yes, use "Save" button or edit entries.
+
+**Q: Is there a password strength meter?**
+A: Yes, with visual feedback and crack time estimate.
+
+### Security
+
+**Q: How is my PIN protected?**
+A: PIN never stored. Argon2id derives key each time.
+
+**Q: What if someone steals my device?**
+A: They need PIN. 5 wrong attempts = 10 minute lockout.
+
+**Q: Can MemPass see my data?**
+A: No network requests = no data transmission. Complete privacy.
+
+**Q: What encryption is used?**
+A: AES-256-GCM (military grade).
+
+### Technical
+
+**Q: What browsers are supported?**
+A: Chrome 55+, Firefox 52+, Safari 10.1+, Edge 79+.
+
+**Q: Does it work without internet?**
+A: 100%. No internet needed after first load.
+
+**Q: Can I host it myself?**
+A: Yes, all files are static. Deploy anywhere.
+
+**Q: Is there a mobile app?**
+A: It's a PWA - install on home screen from browser.
 
 ---
 
-## 📄 Document Types
+## 📄 **License**
 
-| Type | Icon | Fields | Max Files |
-|------|------|--------|-----------|
-| **Aadhar Card** | 🆔 | Number, Name, DOB, Gender, Address | 2 |
-| **PAN Card** | 📄 | Number, Name, Father's Name, DOB | 1 |
-| **Voter ID** | 🗳️ | EPIC Number, Name, Father's Name, Address | 2 |
-| **Passport** | 🛂 | Number, Name, DOB, Issue/Expiry, Place | 2 |
-| **Driving License** | 🚗 | Number, Name, DOB, Issue/Expiry, Vehicle Class | 2 |
-| **Other** | 📁 | Number, Title, Issue/Expiry | 5 |
-
----
-
-## 🤝 Contributing
-
-1. **Fork** the repository
-2. **Create** feature branch
-3. **Commit** changes
-4. **Push** to branch
-5. **Open** Pull Request
-
-### Guidelines
-- Maintain zero external dependencies
-- Keep backward compatibility
-- Add comments for complex logic
-- Test in multiple browsers
-
----
-
-## 📄 License
-
-**MIT License** - See LICENSE file for details
+**MIT License**
 
 ```
 Copyright (c) 2025 MemPass Contributors
@@ -416,44 +755,50 @@ SOFTWARE.
 
 ---
 
-## 🙏 Acknowledgements
+## 🙏 **Acknowledgements**
 
-### Libraries
-- **[Argon2-browser](https://github.com/antelle/argon2-browser)** by Anton Danshin (MIT License)
-- **[Dexie.js](https://dexie.org/)** by David Fahlander (Apache License 2.0)
+### Open Source Libraries
+- **Argon2-browser** by Anton Danshin - MIT License
+- **Dexie.js** by David Fahlander - Apache 2.0 License
 
 ### Inspiration
-- LessPass - Deterministic password generator
-- Bitwarden - Secure vault concepts
-- 1Password - Document storage ideas
+- The need for secure, private document storage for everyone
+- Digital India initiative for promoting digital awareness
+- LessPass for deterministic password generation concepts
 
 ---
 
-## 📞 Support
+## 📞 **Support**
 
-- **GitHub Issues:** [Report Bug](https://github.com/yourusername/mempass/issues)
-- **Email:** support@mempass.local
-
----
-
-## 📊 Project Status
-
-**Current Version:** 2.3.0  
-**Release Date:** March 2025
+- **GitHub Issues:** Report bugs and suggest improvements
+- **Email:** support@mempass.local (placeholder)
 
 ---
 
-## ⭐ Support the Project
+## 📊 **Project Status**
 
-If you find MemPass useful:
-- ⭐ Star the repository
-- 🐛 Report issues
-- 🔁 Share with friends
-
----
-
-**Stay secure!** 🔐
+| Version | Release Date | Status |
+|---------|--------------|--------|
+| 2.3 | March 2025 | Current |
 
 ---
 
-*Made with ❤️ for privacy-conscious users*
+## ⭐ **Support the Project**
+
+If MemPass is useful to you:
+- ⭐ Star the repository on GitHub
+- 🐛 Report issues you find
+- 🔁 Share with friends and family
+- 📝 Suggest improvements
+
+---
+
+# 🔐 **MemPass - Your Digital Vault**
+
+**Aadhar se Passport tak  
+Password se Property papers tak  
+Sab safe, sab secure, sab MemPass mein**
+
+*100% Offline • 100% Free • 100% Private*
+
+---
