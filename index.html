@@ -274,18 +274,30 @@
                     <small>Max 5 files. Follow size limits.</small>
                 </div>
                 
-                <!-- Favorite Checkbox -->
-                <div class="input-group">
-                    <label>
-                        <input type="checkbox" id="documentFavorite"> Mark as favorite
-                    </label>
-                </div>
-                
-                <!-- Modal Actions -->
-                <div class="modal-actions">
-                    <button id="saveDocumentBtn">💾 Save</button>
-                    <button id="closeDocumentModalBtn" style="background:#718096;">Close</button>
-                </div>
+              <!-- Favorite Checkbox -->
+<div class="input-group">
+    <label>
+        <input type="checkbox" id="documentFavorite"> Mark as favorite
+    </label>
+</div>
+
+<!-- 📝 NOTES FIELD - YEH AADHA CODE HAI -->
+<div class="input-group">
+    <label for="documentNotes">📝 Notes (Optional)</label>
+    <textarea id="documentNotes" 
+              placeholder="Add any notes about this document... e.g., 'Primary ID proof', 'Keep for passport', 'Expires soon'"
+              style="width: 100%; padding: 12px; border: 2px solid var(--input-border); border-radius: 12px; 
+                     background: var(--input-bg); color: var(--text-primary); min-height: 80px;"></textarea>
+    <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+        Add reminders, important info, or context about this document
+    </small>
+</div>
+
+<!-- Modal Actions -->
+<div class="modal-actions">
+    <button id="saveDocumentBtn">💾 Save</button>
+    <button id="closeDocumentModalBtn" style="background:#718096;">Close</button>
+</div>
             </div>
         </div>
 
