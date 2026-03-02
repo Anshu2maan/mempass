@@ -10,6 +10,8 @@ class PasswordVault {
         this.settingsKey = STORAGE_KEYS.settings;
         this.settings = JSON.parse(localStorage.getItem(this.settingsKey) || '{}');
         this.initDB();
+        this.operationQueue = Promise.resolve();  // Queue for sequential operations
+
     }
 
     // ==================== DATABASE METHODS ====================
@@ -28,6 +30,15 @@ class PasswordVault {
             this.db = null;
             // Even without DB, we can still work with in-memory passwords
         }
+    }
+
+    async _queueOperation(operation) {
+        // Execute operations sequentially to prevent race conditions
+        this.operationQueue = this.operationQueue.then(() => operation()).catch(err => {
+            console.error('Queue operation failed:', err);
+            throw err;
+        });
+        return this.operationQueue;
     }
 
     async loadPasswords() {
@@ -72,33 +83,54 @@ class PasswordVault {
     }
 
     async verifyPin(pin) {
-        if (!this.settings.saltB64) {
-            console.log('No PIN set yet');
-            return false;
-        }
+    if (!this.settings.saltB64) return false;
 
-        try {
-            const salt = cryptoUtils.fromBase64(this.settings.saltB64);
-            const derivedKey = await cryptoUtils.deriveKeyFromPin(pin, salt);
-            
-            // FIXED: Find any encrypted password to test, not just first one
-            const testPwd = this.passwords.find(p => p.password && p.password.iv);
-            if (testPwd) {
-                await this.decryptField(derivedKey, testPwd.password);
-            }
-            
-            this.key = derivedKey;
-            
-            // FIXED: Decrypt all passwords after successful verification
-            await this.decryptVault();
-            
-            return true;
-        } catch (err) {
-            console.log('PIN verification failed:', err);
-            this.key = null;
-            return false;
-        }
+    // FIX: Check lockout FIRST
+    const lockUntil = localStorage.getItem(STORAGE_KEYS.pinLockUntil);
+    if (lockUntil && Date.now() < parseInt(lockUntil)) {
+        const remaining = Math.ceil((parseInt(lockUntil) - Date.now()) / 60000);
+        throw new Error(`Too many attempts. Locked for ${remaining} more minutes.`);
     }
+
+    try {
+        const salt = cryptoUtils.fromBase64(this.settings.saltB64);
+        const derivedKey = await cryptoUtils.deriveKeyFromPin(pin, salt);
+        
+        // Test key with a sample decryption
+        const testPwd = this.passwords.find(p => p.password && p.password.iv);
+        if (testPwd) {
+            await this.decryptField(derivedKey, testPwd.password);
+        }
+        
+        this.key = derivedKey;
+        
+        // FIX: Reset attempts on success
+        localStorage.setItem(STORAGE_KEYS.pinAttempts, '0');
+        localStorage.removeItem(STORAGE_KEYS.pinLockUntil);
+        
+        // Decrypt vault
+        await this.decryptVault();
+        
+        return true;
+        
+    } catch (err) {
+        console.log('PIN verification failed:', err);
+        
+        // FIX: Track failed attempts
+        let attempts = parseInt(localStorage.getItem(STORAGE_KEYS.pinAttempts) || '0');
+        attempts++;
+        localStorage.setItem(STORAGE_KEYS.pinAttempts, attempts.toString());
+        
+        if (attempts >= MAX_PIN_ATTEMPTS) {
+            const lockUntil = Date.now() + (LOCKOUT_DURATION_MIN * 60 * 1000);
+            localStorage.setItem(STORAGE_KEYS.pinLockUntil, lockUntil.toString());
+            localStorage.setItem(STORAGE_KEYS.pinAttempts, '0'); // Reset counter
+        }
+        
+        this.key = null;
+        return false;
+    }
+}
 
     async decryptVault() {
         if (!this.key) throw new Error('No key available');
@@ -225,87 +257,104 @@ class PasswordVault {
     // ==================== PASSWORD CRUD METHODS ====================
 
     async addPassword(service, username, password, notes = '') {
-        if (!this.key) throw new Error('Vault is locked');
+    if (!this.key) throw new Error('Vault is locked');
 
-        const encryptedPwd = await this.encryptField(password);
-        const encryptedUser = username ? await this.encryptField(username) : null;
-        const encryptedNotes = notes ? await this.encryptField(notes) : null;
+    const encryptedPwd = await this.encryptField(password);
+    const encryptedUser = username ? await this.encryptField(username) : null;
+    const encryptedNotes = notes ? await this.encryptField(notes) : null;
 
-        const entry = {
-            service: service.toLowerCase(),
-            username: encryptedUser,
-            password: encryptedPwd,
-            notes: encryptedNotes,
-            created: new Date().toISOString(),
-            updated: new Date().toISOString(),
-            version: parseInt(document.getElementById('version')?.value || '1'),
-            favorite: false,
-            accessCount: 0,
-            lastAccessed: null
-        };
+    const entry = {
+        service: service.toLowerCase(),
+        username: encryptedUser,
+        password: encryptedPwd,
+        notes: encryptedNotes,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        version: 1,  // FIX: Don't depend on DOM
+        favorite: false,
+        accessCount: 0,
+        lastAccessed: null
+    };
 
-        if (this.db) {
-            entry.id = await this.db.passwords.add(entry);
-        } else {
-            entry.id = Date.now() + Math.random(); // Fallback ID
-            this.passwords.push(entry);
-        }
-        
-        // Add to array if DB insert didn't already do it
-        if (this.db && !this.passwords.find(p => p.id === entry.id)) {
-            this.passwords.push(entry);
-        }
-        
-        // Store decrypted values for UI
-        entry._decryptedPassword = password;
-        entry._decryptedUsername = username;
-        entry._decryptedNotes = notes;
-        
-        await this.loadPasswords(); // Refresh
-        return entry;
+    // FIX: Store decrypted values FIRST
+    entry._decryptedPassword = password;
+    entry._decryptedUsername = username;
+    entry._decryptedNotes = notes;
+
+    // FIX: Handle DB and array properly
+    if (this.db) {
+        entry.id = await this.db.passwords.add(entry);
+        this.passwords.push(entry);  // FIX: Always add to array
+    } else {
+        entry.id = Date.now();
+        this.passwords.push(entry);
     }
+    
+    return entry;  // FIX: Don't call loadPasswords() again
+}
 
     async updatePassword(id, updates) {
-        const index = this.passwords.findIndex(p => String(p.id) === String(normalizedId));
-        if (index === -1) throw new Error('Password not found');
+    // FIX: Normalize ID properly
+    const normalizedId = typeof id === 'string' ? parseInt(id) || id : id;
+    
+    // FIX: Find index with proper comparison
+    const index = this.passwords.findIndex(p => {
+        const pId = typeof p.id === 'string' ? parseInt(p.id) || p.id : p.id;
+        return pId == normalizedId;  // FIX: Use loose equality
+    });
+    
+    if (index === -1) throw new Error('Password not found');
 
-        const entry = { ...this.passwords[index], ...updates, updated: new Date().toISOString() };
-        
-        if (updates.password) {
-            entry.password = await this.encryptField(updates.password);
-            entry._decryptedPassword = updates.password;
-        }
-        if (updates.username) {
-            entry.username = await this.encryptField(updates.username);
-            entry._decryptedUsername = updates.username;
-        }
-        if (updates.notes) {
-            entry.notes = await this.encryptField(updates.notes);
-            entry._decryptedNotes = updates.notes;
-        }
-
-        if (this.db) {
-            await this.db.passwords.put(entry);
-        }
-        
-        this.passwords[index] = entry;
-        return entry;
+    const entry = { ...this.passwords[index] };
+    entry.updated = new Date().toISOString();
+    
+    // FIX: Only update provided fields
+    if (updates.password !== undefined) {
+        entry.password = await this.encryptField(updates.password);
+        entry._decryptedPassword = updates.password;
+    }
+    if (updates.username !== undefined) {
+        entry.username = await this.encryptField(updates.username);
+        entry._decryptedUsername = updates.username;
+    }
+    if (updates.notes !== undefined) {
+        entry.notes = await this.encryptField(updates.notes);
+        entry._decryptedNotes = updates.notes;
     }
 
-    async deletePassword(id) {
-        // Normalize id type: UI may pass string IDs (from HTML attributes)
-        const normalizedId = (typeof id === 'string' && /^\d+$/.test(id)) ? Number(id) : id;
+    this.passwords[index] = entry;
+    
+    if (this.db) {
+        await this.db.passwords.put(entry);
+    }
+    
+    return entry;
+}
 
-        const index = this.passwords.findIndex(p => p.id === normalizedId);
+    async deletePassword(id) {
+    // Queue mein wrap karo - race condition fix
+    return this._queueOperation(async () => {
+        // ID normalize karo - string/number dono handle karo
+        const normalizedId = typeof id === 'string' ? parseInt(id) || id : id;
+        
+        // Loose equality se compare karo (== use karo, === nahi)
+        const index = this.passwords.findIndex(p => {
+            const pId = typeof p.id === 'string' ? parseInt(p.id) || p.id : p.id;
+            return pId == normalizedId;
+        });
+        
         if (index === -1) return false;
 
+        // DB se delete karo
         if (this.db) {
             await this.db.passwords.delete(normalizedId);
         }
         
+        // Array se hatao
         this.passwords.splice(index, 1);
         return true;
-    }
+    });
+}
 
     getPassword(id, incrementAccess = true) {
         const pwd = this.passwords.find(p => p.id === id);
@@ -318,20 +367,32 @@ class PasswordVault {
     }
 
     searchPasswords(query) {
-        if (!query) return this.passwords;
+    if (!query) return [...this.passwords];
+    
+    const q = query.toLowerCase().trim();
+    return this.passwords.filter(p => {
+        // Service name check (p.service already string hai)
+        const service = (p.service || '').toLowerCase();
         
-        const q = query.toLowerCase();
-        return this.passwords.filter(p => {
-            const svc = (p.service && typeof p.service === 'string') ? p.service.toLowerCase() : '';
-            const user = this.getDecryptedUsername(p) || '';
-            const notes = this.getDecryptedNotes(p) || '';
-            return (
-                (svc && svc.includes(q)) ||
-                (user && user.toLowerCase().includes(q)) ||
-                (notes && notes.toLowerCase().includes(q))
-            );
-        });
-    }
+        // Username check - decrypt karo agar zaroorat ho
+        let username = '';
+        if (p._decryptedUsername) {
+            username = p._decryptedUsername.toLowerCase();
+        } else if (p.username && typeof p.username === 'string') {
+            username = p.username.toLowerCase();
+        }
+        
+        // Notes check
+        let notes = '';
+        if (p._decryptedNotes) {
+            notes = p._decryptedNotes.toLowerCase();
+        } else if (p.notes && typeof p.notes === 'string') {
+            notes = p.notes.toLowerCase();
+        }
+        
+        return service.includes(q) || username.includes(q) || notes.includes(q);
+    });
+}
 
     sortPasswords(sortBy = 'newest') {
         const sorted = [...this.passwords];
@@ -406,61 +467,9 @@ class PasswordVault {
 
     // ==================== EXPORT/IMPORT METHODS ====================
 
-    async exportData() {
-        if (!this.key) throw new Error("Vault not unlocked - please unlock first");
-        
-        const password = prompt('🔐 Set a strong password (min 8 chars) to encrypt export:');
-        if (!password) throw new Error('Export cancelled');
-        if (password.length < 8) throw new Error('Password must be at least 8 characters');
-
-        const exportPasswords = [];
-        for (let pwd of this.passwords) {
-            try {
-                exportPasswords.push({
-                    id: pwd.id,
-                    service: pwd.service,
-                    username: this.getDecryptedUsername(pwd),
-                    password: this.getDecryptedPassword(pwd),
-                    notes: this.getDecryptedNotes(pwd),
-                    created: pwd.created,
-                    updated: pwd.updated,
-                    version: pwd.version,
-                    favorite: pwd.favorite,
-                    accessCount: pwd.accessCount,
-                    lastAccessed: pwd.lastAccessed
-                });
-            } catch (err) {
-                console.warn('Failed to decrypt password for export:', err);
-            }
-        }
-
-        const json = JSON.stringify({
-            settings: this.settings,
-            vault: exportPasswords,
-            exportDate: new Date().toISOString(),
-            version: '2.2'
-        });
-
-        const salt = cryptoUtils.generateSalt();
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const exportKey = await cryptoUtils.deriveExportKey(password, salt);
-        
-        const encrypted = await crypto.subtle.encrypt(
-            { name: "AES-GCM", iv },
-            exportKey,
-            new TextEncoder().encode(json)
-        );
-
-        return {
-            encrypted: true,
-            saltB64: cryptoUtils.toBase64(salt),
-            ivB64: cryptoUtils.toBase64(iv),
-            dataB64: cryptoUtils.toBase64(new Uint8Array(encrypted)),
-            version: '2.2'
-        };
-    }
-
     async importData(data) {
+    // Queue mein wrap karo - race condition fix
+    return this._queueOperation(async () => {
         if (!this.key) throw new Error("Vault not unlocked - please unlock first");
         
         let parsed;
@@ -499,7 +508,7 @@ class PasswordVault {
             throw new Error('Invalid export format');
         }
         
-        // FIXED: Handle DB unavailable case
+        // Handle DB unavailable case
         if (this.db) {
             await this.db.passwords.clear();
         }
@@ -523,7 +532,7 @@ class PasswordVault {
             }
         }
         
-        // FIXED: Save to DB if available, otherwise just update localStorage
+        // Save to DB if available
         localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
         
         if (this.db) {
@@ -534,8 +543,8 @@ class PasswordVault {
         }
         
         return true;
-    }
-
+    });
+}
     // ==================== UTILITY METHODS ====================
 
     resetPin() {
