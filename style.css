@@ -945,6 +945,33 @@ footer {
     box-shadow: none;
 }
 
+/* Document Modal Notes Field */
+#documentNotes {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--input-border);
+    border-radius: 12px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.3s ease;
+}
+
+#documentNotes:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+#documentNotes + small {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: block;
+}
+
 /* ==================== DEBUG BUTTON ==================== */
 .debug-btn {
     position: fixed;
