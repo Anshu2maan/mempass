@@ -1071,11 +1071,14 @@ async function handleDocumentUpload() {
             if (input?.value) metadata[key] = input.value;
         }
         
+        // 📝 YAHAN SE NOTES LE RAHE HAIN
+        const notes = document.getElementById('documentNotes')?.value || '';
+        
         await window.documentVault.addDocument({
             type, title, metadata,
             tags: [],
             favorite: document.getElementById('documentFavorite')?.checked || false,
-            notes: ''
+            notes: notes  // <--- FIXED! Ab notes save hoga
         }, Array.from(files));
         
         closeDocumentModal();
@@ -1090,12 +1093,14 @@ async function handleDocumentUpload() {
         resetInactivityTimer();
     }
 }
-
 function closeDocumentModal() {
     document.getElementById('documentModal').style.display = 'none';
     document.getElementById('documentTitle').value = '';
     document.getElementById('documentFiles').value = '';
     document.getElementById('documentFavorite').checked = false;
+    // 📝 NOTES FIELD BHI RESET KARO
+    const notesField = document.getElementById('documentNotes');
+    if (notesField) notesField.value = '';
     document.querySelectorAll('[id^="doc_"]').forEach(f => f.value = '');
     resetInactivityTimer();
 }
