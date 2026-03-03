@@ -3,6 +3,8 @@
 **Store Aadhar, PAN, Passports & Passwords Securely • 100% Offline • PIN Protected**
 
 ---
+![Tests](https://github.com/Anshu2maan/mempass/actions/workflows/ultimate-tests.yml/badge.svg)
+
 
 ## 📋 **Table of Contents**
 - [Why MemPass Exists](#-why-mempass-exists)
