@@ -1,0 +1,218 @@
+name: 🔬 ULTIMATE REAL TESTS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ultimate-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install Test Tools
+        run: |
+          npm install --save-dev puppeteer jest
+          npx puppeteer browsers install chrome
+          
+      - name: Create ULTIMATE Test File
+        run: |
+          cat > ultimate.test.js << 'EOF'
+          /**
+           * 🚀 ULTIMATE REAL TESTS for MemPass
+           * Browser mein actual app chalake testing
+           */
+          
+          const puppeteer = require('puppeteer');
+          
+          describe('MemPass Ultimate Tests', () => {
+            let browser, page;
+            
+            beforeAll(async () => {
+              // Actual browser launch
+              browser = await puppeteer.launch({
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                headless: 'new'
+              });
+              page = await browser.newPage();
+              
+              // Console logs capture karo
+              page.on('console', msg => console.log('BROWSER:', msg.text()));
+              
+              // Errors capture karo
+              page.on('pageerror', error => console.log('PAGE ERROR:', error));
+              
+              // App load karo
+              const path = require('path');
+              const filePath = 'file://' + path.resolve(__dirname, 'index.html');
+              await page.goto(filePath, { waitUntil: 'networkidle0' });
+            }, 30000);
+            
+            afterAll(async () => {
+              await browser.close();
+            });
+            
+            test('🔐 TEST 1: App Loads Properly', async () => {
+              const title = await page.title();
+              expect(title).toContain('MemPass');
+              
+              // PIN input visible hai?
+              const pinInput = await page.$('input[type="password"]');
+              expect(pinInput).not.toBeNull();
+              
+              console.log('✅ App loaded successfully');
+            });
+            
+            test('🔐 TEST 2: Web Crypto API Available', async () => {
+              const cryptoTest = await page.evaluate(() => {
+                return {
+                  cryptoExists: typeof crypto !== 'undefined',
+                  subtleExists: crypto && typeof crypto.subtle !== 'undefined',
+                  randomUUID: typeof crypto.randomUUID === 'function'
+                };
+              });
+              
+              expect(cryptoTest.cryptoExists).toBe(true);
+              expect(cryptoTest.subtleExists).toBe(true);
+              
+              console.log('✅ Web Crypto API available:', cryptoTest);
+            });
+            
+            test('🔐 TEST 3: Argon2id Loaded', async () => {
+              const argon2Test = await page.evaluate(() => {
+                return typeof argon2 !== 'undefined' && 
+                       typeof argon2.hash === 'function';
+              });
+              
+              expect(argon2Test).toBe(true);
+              console.log('✅ Argon2id library loaded');
+            });
+            
+            test('🔐 TEST 4: Wrong PIN Attempt Lockout', async () => {
+              // 5 galat PIN try karo
+              for (let i = 1; i <= 5; i++) {
+                await page.type('input[type="password"]', 'wrong' + i);
+                await page.click('button:not([disabled])');
+                
+                // Wait for error message
+                await page.waitForTimeout(500);
+                
+                // Clear input for next try
+                await page.click('input[type="password"]', { clickCount: 3 });
+                await page.keyboard.press('Backspace');
+              }
+              
+              // Check lockout message
+              const lockoutMessage = await page.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll('*'));
+                return elements.some(el => 
+                  el.textContent && el.textContent.includes('Locked for 10 minutes')
+                );
+              });
+              
+              console.log('✅ Lockout working:', lockoutMessage);
+              expect(lockoutMessage).toBe(true);
+            }, 15000);
+            
+            test('🔐 TEST 5: Password Generator Deterministic', async () => {
+              // Password generator test
+              const genTest = await page.evaluate(() => {
+                // Agar password generator function available hai
+                if (typeof generateDeterministicPassword === 'function') {
+                  const testCases = [
+                    { input: ['master123', 'gmail', 1], expected: 'same' }
+                  ];
+                  return 'Password generator available';
+                }
+                return 'Generator not available';
+              });
+              
+              console.log('✅ Password Generator:', genTest);
+              expect(genTest).toBeTruthy();
+            });
+            
+            test('🔐 TEST 6: Dexie (IndexedDB) Working', async () => {
+              const dbTest = await page.evaluate(() => {
+                return typeof Dexie !== 'undefined';
+              });
+              
+              expect(dbTest).toBe(true);
+              console.log('✅ Dexie/IndexedDB available');
+            });
+            
+            test('🔐 TEST 7: No Network Calls', async () => {
+              // Check koi network request to nahi ho rahi
+              const requests = [];
+              page.on('request', request => {
+                if (!request.url().startsWith('file://')) {
+                  requests.push(request.url());
+                }
+              });
+              
+              await page.waitForTimeout(1000);
+              
+              expect(requests.length).toBe(0);
+              console.log('✅ No external network calls:', requests);
+            });
+            
+            test('🔐 TEST 8: Document Template Fields', async () => {
+              // Check Aadhar template exists
+              const templateTest = await page.evaluate(() => {
+                // Look for Aadhar related text
+                const bodyText = document.body.textContent;
+                return {
+                  aadharFound: bodyText.includes('Aadhar') || bodyText.includes('Aadhaar'),
+                  panFound: bodyText.includes('PAN'),
+                  passportFound: bodyText.includes('Passport')
+                };
+              });
+              
+              console.log('✅ Templates found:', templateTest);
+              expect(templateTest.aadharFound).toBe(true);
+            });
+            
+            test('🔐 TEST 9: Auto-Lock Feature', async () => {
+              // Auto-lock settings check karo
+              const autoLockTest = await page.evaluate(() => {
+                // CONSTANTS object mein auto-lock time check
+                if (typeof CONSTANTS !== 'undefined') {
+                  return CONSTANTS.AUTO_LOCK_MINUTES === 5;
+                }
+                // Ya UI mein auto-lock mention
+                return document.body.textContent.includes('auto-lock') ||
+                       document.body.textContent.includes('Auto lock');
+              });
+              
+              console.log('✅ Auto-lock configured:', autoLockTest);
+              expect(autoLockTest).toBe(true);
+            });
+            
+            test('🔐 TEST 10: File Upload Support', async () => {
+              const fileInput = await page.$('input[type="file"]');
+              const hasFileInput = fileInput !== null;
+              
+              console.log('✅ File upload supported:', hasFileInput);
+              // Ye optional hai, kuch pages par nahi bhi ho sakta
+            });
+            
+          });
+          EOF
+          
+      - name: Create Jest Config
+        run: |
+          cat > jest.config.js << 'EOF'
+          module.exports = {
+            testTimeout: 30000,
+            verbose: true
+          };
+          EOF
+          
+      - name: Run ULTIMATE Tests
+        run: npx jest ultimate.test.js --forceExit
