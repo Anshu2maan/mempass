@@ -1,3 +1,8 @@
+/**
+ * Utility helper functions used across the application.
+ * Includes DOM helpers, toast notifications, and formatting helpers.
+ * All methods are static and stateless.
+ */
 class Utils {
     static escapeHtml(text) {
         if (!text) return '';
@@ -22,10 +27,10 @@ class Utils {
     }
 
     static showToast(message, duration = 3000) {
-        // Agar message nahi hai to return
+        // if there's no message, exit early
         if (!message) return;
         
-        // Message ko string mein convert karo
+        // convert incoming message to string
         const msgStr = message.toString();
         
         // User-friendly messages

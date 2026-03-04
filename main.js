@@ -1,12 +1,12 @@
-// main.js - Final version with all enhancements
+// main.js - Final version with Google Drive Auto Backup (March 2026 update)
 window.vault = null;
 window.documentVault = null;
 window.isVaultUnlocked = false;
 window.autoLockTimer = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 MemPass v2.1 starting...');
-    
+    console.log('🚀 MemPass v2.3 starting... (with Google Drive sync support)');
+
     // Disable browser autofill on sensitive inputs
     const sensitiveInputs = ['masterPhrase', 'serviceName', 'pin1', 'pin2', 'pin3', 'pin4', 'pin5', 'pin6'];
     sensitiveInputs.forEach(id => {
@@ -19,17 +19,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.setAttribute('data-form-type', 'other');
         }
     });
-    
+
     try {
         // Add CSS animations and init theme
         if (typeof Utils !== 'undefined') {
-            Utils.addKeyframeAnimations();
-            Utils.initTheme();  // Ye line add karo
+            Utils.addKeyframeAnimations?.();
+            Utils.initTheme?.();
         }
 
         // Initialize password vault
         vault = new PasswordVault();
         window.vault = vault;
+
+        // Initialize document vault (depends on vault.key later)
+        if (typeof initDocumentVault === 'function') {
+            window.documentVault = await initDocumentVault();
+        }
+
+        // Initialize Google Drive sync (must after vault)
+        if (typeof GoogleDriveSync !== 'undefined') {
+            window.googleDriveSync = new GoogleDriveSync();
+            await window.googleDriveSync.init();
+            console.log('☁️ Google Drive sync module initialized');
+        }
 
         // Setup initial UI state
         setupInitialUIState();
@@ -51,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log("✅ MemPass core initialized");
     } catch (error) {
         console.error("❌ Initialization failed:", error);
-        Utils?.showToast?.("Error starting MemPass. Check console.");
+        Utils?.showToast?.("Error starting MemPass. Check console for details.", 5000);
     }
 });
 
@@ -71,14 +83,14 @@ function setupInitialUIState() {
 }
 
 function setupEventListeners() {
-    // Password generation (async)
+    // ───── Password Generation & Management ─────
     document.getElementById('generatePasswordBtn')?.addEventListener('click', async () => {
         await generatePassword();
     });
-    
+
     document.getElementById('savePasswordBtn')?.addEventListener('click', savePassword);
     document.getElementById('copyPasswordBtn')?.addEventListener('click', copyPassword);
-    document.getElementById('incrementVersion')?.addEventListener('click', incrementVersion);
+    document.getElementById('incrementVersionBtn')?.addEventListener('click', incrementVersion);
 
     // Master phrase strength meter
     document.getElementById('masterPhrase')?.addEventListener('input', (e) => {
@@ -98,7 +110,7 @@ function setupEventListeners() {
         }
     });
 
-    // Live search for passwords & documents (debounced)
+    // Live search (debounced)
     const debounce = (fn, wait = 200) => {
         let t;
         return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
@@ -108,71 +120,62 @@ function setupEventListeners() {
     document.getElementById('searchDocuments')?.addEventListener('input', debounce(() => loadDocuments(), 150));
 
     // Theme toggle
-    document.getElementById('themeToggleBtn')?.addEventListener('click', () => Utils.toggleTheme());
+    document.getElementById('themeToggleBtn')?.addEventListener('click', () => Utils.toggleTheme?.());
 
-    // Export / Import buttons
+    // Export / Import
     document.getElementById('exportVaultBtn')?.addEventListener('click', () => exportVault());
     document.getElementById('importVaultBtn')?.addEventListener('click', () => importVault());
-    document.getElementById('exportDocumentsBtn')?.addEventListener('click', () => exportDocuments());
+    document.getElementById('exportDocumentsBtn')?.addEventListener('click', () => exportDocuments?.());
 
-    // Document modal buttons
-    document.getElementById('addDocumentBtn')?.addEventListener('click', () => showDocumentModal());
-    document.getElementById('saveDocumentBtn')?.addEventListener('click', () => handleDocumentUpload());
-    document.getElementById('closeDocumentModalBtn')?.addEventListener('click', () => closeDocumentModal());
-    document.getElementById('documentType')?.addEventListener('change', (e) => updateDocumentFields(e.target.value));
-    // Document import/export
-    document.getElementById('importDocumentsBtn')?.addEventListener('click', () => importDocuments());
-    // Document view modal close
-    document.getElementById('closeDocumentViewBtn')?.addEventListener('click', () => closeDocumentViewModal());
-    document.getElementById('editDocumentBtn')?.addEventListener('click', (e) => {
-        const modal = document.getElementById('documentViewModal');
-        const title = document.getElementById('viewDocumentTitle').textContent;
-        // Find the document ID from the view modal (we need a way to track it)
-        // For now, pass through a stored reference
+    // ───── Document Handlers ─────
+    document.getElementById('addDocumentBtn')?.addEventListener('click', () => showDocumentModal?.());
+    document.getElementById('saveDocumentBtn')?.addEventListener('click', () => handleDocumentUpload?.());
+    document.getElementById('closeDocumentModalBtn')?.addEventListener('click', () => closeDocumentModal?.());
+    document.getElementById('documentType')?.addEventListener('change', (e) => updateDocumentFields?.(e.target.value));
+
+    document.getElementById('importDocumentsBtn')?.addEventListener('click', () => importDocuments?.());
+    document.getElementById('closeDocumentViewBtn')?.addEventListener('click', () => closeDocumentViewModal?.());
+
+    document.getElementById('editDocumentBtn')?.addEventListener('click', () => {
         if (window.currentViewingDocId) {
-            editDocument(window.currentViewingDocId);
+            editDocument?.(window.currentViewingDocId);
         }
     });
-    
-    // Document edit modal buttons
-    document.getElementById('saveEditDocumentBtn')?.addEventListener('click', () => saveEditDocument());
-    document.getElementById('closeEditDocumentModalBtn')?.addEventListener('click', () => closeEditDocumentModal());
 
-    // Vault / PIN modal buttons
+    document.getElementById('saveEditDocumentBtn')?.addEventListener('click', () => saveEditDocument?.());
+    document.getElementById('closeEditDocumentModalBtn')?.addEventListener('click', () => closeEditDocumentModal?.());
+
+    // ───── PIN & Vault ─────
     document.getElementById('unlockVaultBtn')?.addEventListener('click', () => showPinModal('verify'));
     document.getElementById('verifyPinBtn')?.addEventListener('click', verifyPin);
     document.getElementById('closePinModalBtn')?.addEventListener('click', closePinModal);
-    document.getElementById('forgotPinLink')?.addEventListener('click', (e) => { e.preventDefault(); forgotPin(); });
+    document.getElementById('forgotPinLink')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        forgotPin?.();
+    });
 
-    // Tab buttons inside unlocked vault
+    // ───── Tabs ─────
     document.getElementById('showPasswordsTab')?.addEventListener('click', showPasswordsTab);
     document.getElementById('showDocumentsTab')?.addEventListener('click', showDocumentsTab);
 
-    // Make the Expiring Soon stat clickable: switch to Documents tab and show expiring list
-    const expCountEl = document.getElementById('docExpiringCount');
-    if (expCountEl) {
-        const statItem = expCountEl.closest('.stat-item') || expCountEl;
-        statItem.classList.add('clickable');
-        statItem.addEventListener('click', () => {
-            const inner = statItem.querySelector('.stat-value') || statItem;
-            inner.classList.add('pressed');
-            setTimeout(() => inner.classList.remove('pressed'), 300);
-            if (typeof showDocumentsTab === 'function') showDocumentsTab();
-            setTimeout(() => {
-                if (typeof showExpiringDocuments === 'function') showExpiringDocuments();
-            }, 120);
-        });
-    }
-
-    // Toggle for generated password display
-    document.getElementById('togglePasswordOutput')?.addEventListener('click', () => {
-        if (typeof togglePasswordOutput === 'function') togglePasswordOutput();
+    // ───── Google Drive Sync Button ─────
+    document.getElementById('driveSyncBtn')?.addEventListener('click', () => {
+        if (window.googleDriveSync?.enabled) {
+            if (confirm('Disable backup? (Cancel to reconfigure)')) {
+                window.googleDriveSync.disable();
+            } else {
+                window.googleDriveSync.enable();
+            }
+        } else {
+            window.googleDriveSync?.enable();
+        }
     });
-    
-    // Make the Total stat clickable: show all documents
-    const totalEl = document.getElementById('docTotalCount');
-    if (totalEl) {
-        const statItem = totalEl.closest('.stat-item') || totalEl;
+
+    // ───── Stats Click Handlers (Documents) ─────
+    const makeStatClickable = (elId, actionFn) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const statItem = el.closest('.stat-item') || el;
         statItem.classList.add('clickable');
         statItem.addEventListener('click', () => {
             const inner = statItem.querySelector('.stat-value') || statItem;
@@ -180,75 +183,68 @@ function setupEventListeners() {
             setTimeout(() => inner.classList.remove('pressed'), 300);
             if (typeof showDocumentsTab === 'function') showDocumentsTab();
             setTimeout(() => {
-                if (typeof loadDocuments === 'function') loadDocuments();
+                if (typeof actionFn === 'function') actionFn();
             }, 120);
         });
-    }
+    };
 
-    // Make the Favorites stat clickable: show favorites
-    const favEl = document.getElementById('docFavoritesCount');
-    if (favEl) {
-        const statItem = favEl.closest('.stat-item') || favEl;
-        statItem.classList.add('clickable');
-        statItem.addEventListener('click', () => {
-            const inner = statItem.querySelector('.stat-value') || statItem;
-            inner.classList.add('pressed');
-            setTimeout(() => inner.classList.remove('pressed'), 300);
-            if (typeof showDocumentsTab === 'function') showDocumentsTab();
-            setTimeout(() => {
-                if (typeof showFavoritesDocuments === 'function') showFavoritesDocuments();
-            }, 120);
-        });
-    }
+    makeStatClickable('docExpiringCount', showExpiringDocuments);
+    makeStatClickable('docTotalCount', loadDocuments);
+    makeStatClickable('docFavoritesCount', showFavoritesDocuments);
 
+    // Toggle generated password visibility
+    document.getElementById('togglePasswordOutput')?.addEventListener('click', () => {
+        togglePasswordOutput?.();
+    });
 }
-// Master Phrase Show/Hide Toggle
+
+// ───── Master Phrase Toggle ─────
 const toggleMasterBtn = document.getElementById('toggleMasterPhrase');
 const masterPhraseInput = document.getElementById('masterPhrase');
 
 if (toggleMasterBtn && masterPhraseInput) {
     toggleMasterBtn.addEventListener('click', () => {
         const currentType = masterPhraseInput.getAttribute('type');
-        
         if (currentType === 'password') {
             masterPhraseInput.setAttribute('type', 'text');
-            toggleMasterBtn.textContent = '🙈';   // ya '👁️‍🗨️' ya FontAwesome eye-slash use kar sakta hai
+            toggleMasterBtn.textContent = '🙈';
         } else {
             masterPhraseInput.setAttribute('type', 'password');
             toggleMasterBtn.textContent = '👁️';
         }
-        
-        // Focus wapas input pe (better UX)
         masterPhraseInput.focus();
     });
-    
-    console.log('Master phrase toggle button attached ✅');
+    console.log('Master phrase toggle attached ✅');
 } else {
-    console.error('Master phrase toggle elements not found!');
+    console.warn('Master phrase toggle elements not found');
 }
+
 function setupPinInputs() {
     for (let i = 1; i <= PIN_LENGTH; i++) {
         const pinInput = document.getElementById(`pin${i}`);
         if (pinInput) {
-            pinInput.addEventListener('input', (e) => handlePinInput(i, e));
+            pinInput.addEventListener('input', (e) => handlePinInput?.(i, e));
             pinInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && i === PIN_LENGTH) {
-                    verifyPin();
+                    verifyPin?.();
                 }
             });
         }
     }
 }
 
-// Make functions global
+// Make critical functions globally available
 window.lockVault = lockVault;
 window.unlockVault = unlockVault;
 window.showPinModal = showPinModal;
 window.closePinModal = closePinModal;
 window.verifyPin = verifyPin;
+window.forgotPin = forgotPin;
+window.exportVault = exportVault;
+window.importVault = importVault;
+window.debugVault = debugVault;
 
-// ────────────────────────────────────────────────
-// Service Worker – ONLY THIS ONE (subfolder /mempass/ ke liye)
+// ───── Service Worker Registration ─────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         const swPath = '/mempass/sw.js';
@@ -262,7 +258,7 @@ if ('serviceWorker' in navigator) {
                 console.error('❌ Service Worker registration failed:', err);
             });
 
-        // Purane galat registrations ko forcefully unregister karo (ek baar ke liye)
+        // Clean up old conflicting registrations (one-time)
         navigator.serviceWorker.getRegistrations().then(registrations => {
             registrations.forEach(reg => {
                 if (reg.scope === 'https://anshu2maan.github.io/' || reg.scope.includes('/sw.js')) {
@@ -273,7 +269,3 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
-window.forgotPin = forgotPin;
-window.exportVault = exportVault;
-window.importVault = importVault;
-window.debugVault = debugVault;

@@ -1,3 +1,8 @@
+/**
+ * CryptoUtils provides wrappers around the Web Crypto API and Argon2
+ * library for key derivation, encryption, decryption, and related helpers.
+ * Methods are asynchronous and return Promises.
+ */
 // Crypto utilities using Web Crypto API and Argon2
 class CryptoUtils {
     constructor() {

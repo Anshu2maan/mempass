@@ -1,6 +1,14 @@
-// vault.js - COMPLETELY FIXED - Production Ready Version
-// PasswordVault Class with All Security Enhancements
+// vault.js - core password encryption and storage
+// Implements a PIN‑protected encrypted vault using IndexedDB via Dexie.
+// Most methods are asynchronous and return promises; see individual JSDoc
+// comments for usage.
 
+/**
+ * PasswordVault is responsible for storing, encrypting, and retrieving
+ * password entries.  It uses a local Dexie/IndexedDB database and derives an
+ * AES-GCM cryptographic key from a 6-digit user PIN via argon2id.  All
+ * sensitive fields (password, username, notes) are encrypted before saving.
+ */
 class PasswordVault {
     constructor() {
         console.log('🔐 Initializing PasswordVault');
@@ -256,7 +264,15 @@ class PasswordVault {
 
     // ==================== PASSWORD CRUD METHODS ====================
 
-    async addPassword(service, username, password, notes = '') {
+    /**
+     * Add a new password entry to the vault.
+     * @param {string} service - service or site name (lowercased internally)
+     * @param {string} username - associated user name or email
+     * @param {string} password - plaintext password to store
+     * @param {string} [notes] - optional notes or comments
+     * @returns {Object} the saved entry including generated `id`
+     */
+  async addPassword(service, username, password, notes = '') {
     if (!this.key) throw new Error('Vault is locked');
 
     const encryptedPwd = await this.encryptField(password);
@@ -276,23 +292,36 @@ class PasswordVault {
         lastAccessed: null
     };
 
-    // FIX: Store decrypted values FIRST
+    // Store decrypted values FIRST (for in-memory access)
     entry._decryptedPassword = password;
     entry._decryptedUsername = username;
     entry._decryptedNotes = notes;
 
-    // FIX: Handle DB and array properly
+    // Handle DB and array properly
     if (this.db) {
         entry.id = await this.db.passwords.add(entry);
-        this.passwords.push(entry);  // FIX: Always add to array
+        this.passwords.push(entry);  // Always add to array
     } else {
         entry.id = Date.now();
         this.passwords.push(entry);
     }
-    
-    return entry;  // FIX: Don't call loadPasswords() again
-}
 
+    // ────────────────────────────────────────────────
+    // Google Drive Auto Backup trigger
+    // (debounced upload after ~8 seconds)
+    if (window.googleDriveSync?.enabled) {
+        window.googleDriveSync.queueSync?.();
+    }
+    // ────────────────────────────────────────────────
+
+    return entry;
+}
+    /**
+     * Update an existing password entry.  Only provided fields will be changed.
+     * @param {number|string} id - identifier of the entry to update
+     * @param {Object} updates - fields to modify (service, username, password, notes)
+     * @returns {Object} the updated entry
+     */
     async updatePassword(id, updates) {
     // FIX: Normalize ID properly
     const normalizedId = typeof id === 'string' ? parseInt(id) || id : id;
@@ -328,16 +357,35 @@ class PasswordVault {
         await this.db.passwords.put(entry);
     }
     
+       // ────────────────────────────────────────────────
+    // Google Drive Auto Backup trigger
+    // (debounced upload after ~8 seconds)
+    if (window.googleDriveSync?.enabled) {
+        window.googleDriveSync.queueSync?.();
+    }
+    // ────────────────────────────────────────────────
+    
     return entry;
 }
 
+    /**
+     * Remove a password entry.  This operation is queued to avoid concurrency issues.
+     * @param {number|string} id - id of entry to delete
+     * @returns {boolean} true if entry was found and deleted
+     */
+    /**
+     * Delete a password entry by its ID.  Operation is wrapped in the
+     * internal queue to prevent concurrent modifications.
+     * @param {number|string} id - ID of the entry to remove
+     * @returns {boolean} true if deletion succeeded, false if entry not found
+     */
     async deletePassword(id) {
     // Queue mein wrap karo - race condition fix
     return this._queueOperation(async () => {
-        // ID normalize karo - string/number dono handle karo
+        // normalize ID to handle string or number
         const normalizedId = typeof id === 'string' ? parseInt(id) || id : id;
         
-        // Loose equality se compare karo (== use karo, === nahi)
+        // compare using loose equality (==) to allow type coercion
         const index = this.passwords.findIndex(p => {
             const pId = typeof p.id === 'string' ? parseInt(p.id) || p.id : p.id;
             return pId == normalizedId;
@@ -345,13 +393,18 @@ class PasswordVault {
         
         if (index === -1) return false;
 
-        // DB se delete karo
+        // delete from database if present
         if (this.db) {
             await this.db.passwords.delete(normalizedId);
         }
         
-        // Array se hatao
+        // remove from in-memory array
         this.passwords.splice(index, 1);
+
+        // trigger backup if enabled
+        if (window.googleDriveSync?.enabled) {
+            window.googleDriveSync.queueSync?.();
+        }
         return true;
     });
 }
@@ -366,6 +419,12 @@ class PasswordVault {
         return pwd;
     }
 
+    /**
+     * Perform a search on service, username and notes fields.
+     * Decryption is performed only if necessary and only against the query.
+     * @param {string} query - user-entered search string
+     * @returns {Array} matching password entries
+     */
     searchPasswords(query) {
     if (!query) return [...this.passwords];
     
@@ -374,7 +433,7 @@ class PasswordVault {
         // Service name check (p.service already string hai)
         const service = (p.service || '').toLowerCase();
         
-        // Username check - decrypt karo agar zaroorat ho
+        // Username check - decrypt only if necessary
         let username = '';
         if (p._decryptedUsername) {
             username = p._decryptedUsername.toLowerCase();

@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     Onboarding.init();
 });
 
-// Agar user beech mein tab band kare to cleanup ho jaye
+// Ensure any onboarding overlay is removed if the user leaves the page mid‑tour
 window.addEventListener('beforeunload', () => {
     if (Onboarding.overlay) {
         Onboarding.finish();
