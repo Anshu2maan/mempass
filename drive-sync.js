@@ -1,4 +1,4 @@
-// drive-sync.js - Auto Google Drive Backup for MemPass v2.3+
+// drive-sync.js - Auto Google Drive Backup for MemPass v2.2+
 /**
  * GoogleDriveSync handles optional encrypted backups of the vault to the
  * user's Google Drive.  It authenticates via OAuth2, creates a dedicated
@@ -207,7 +207,7 @@ class GoogleDriveSync {
         }
 
         const full = {
-            version: "2.3",
+            version: "2.2",
             timestamp: Date.now(),
             passwords: passExport,
             documents: (docExport.documents || [])
@@ -259,15 +259,22 @@ class GoogleDriveSync {
 
         let url, method, body;
         if (list.files && list.files.length > 0) {
+            // existing backup – update the file
             const fid = list.files[0].id;
             url = `https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=multipart`;
             method = 'PATCH';
         } else {
+            // first time – create new file in folder
             url = `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`;
             method = 'POST';
         }
 
-        const metadata = { name: this.BACKUP_FILE_NAME, mimeType: 'application/json', parents: [this.folderId] };
+        // Build metadata; only include `parents` when creating a new file.
+        const metadata = { name: this.BACKUP_FILE_NAME, mimeType: 'application/json' };
+        if (method === 'POST') {
+            metadata.parents = [this.folderId];
+        }
+
         const form = new FormData();
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         form.append('file', blob);
@@ -365,7 +372,7 @@ class GoogleDriveSync {
         const plain = JSON.parse(new TextDecoder().decode(decrypted));
 
         // Import passwords
-        await vault.importData({ version: '2.3', vault: plain.passwords, settings: {} });
+        await vault.importData({ version: '2.2', vault: plain.passwords, settings: {} });
 
         // Import documents
         await window.documentVault.importDocuments({ version: '1.0', documents: plain.documents });
