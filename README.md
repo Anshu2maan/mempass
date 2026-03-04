@@ -1035,7 +1035,7 @@ If MemPass helps even one person secure their digital life — it's worth it.
 
 | Version | Release Date | Status |
 |---------|--------------|--------|
-| 2.3 | March 2025 | Current Stable |
+| 2.1 | March 2025 | Current Stable |
 
 ### Stats
 - 📦 150KB total size
