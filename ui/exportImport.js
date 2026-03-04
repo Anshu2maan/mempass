@@ -55,7 +55,11 @@ async function importVault() {
                 Utils.showToast('📤 Imported');
             } catch (err) {
                 console.error('Import error:', err);
-                alert('Import failed: ' + err.message);
+                if (err.message === 'Import cancelled') {
+                    Utils.showToast('Import cancelled');
+                } else {
+                    alert('Import failed: ' + err.message);
+                }
             }
         };
         reader.readAsText(file);
