@@ -1,0 +1,698 @@
+// ui/documents.js - document management UI (listing, stats, upload, edit, etc.)
+
+async function loadDocuments() {
+    if (!window.isVaultUnlocked || !window.documentVault) return;
+    
+    const container = document.getElementById('documentsGrid');
+    const search = document.getElementById('searchDocuments')?.value || '';
+    
+    let docs = search ? await window.documentVault.searchDocuments(search) : window.documentVault.documents || [];
+    
+    updateDocumentStats();
+    
+    if (docs.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">${search ? '🔍' : '📁'}</div>
+                <h3>${search ? 'No documents' : 'No documents yet'}</h3>
+                <p>${search ? 'Try different search' : 'Click + Add to upload'}</p>
+            </div>`;
+        return;
+    }
+    
+    container.innerHTML = docs.map(doc => {
+        const type = DOCUMENT_TYPES[doc.type] || DOCUMENT_TYPES.other;
+        const files = doc.files?.length || 0;
+        const size = doc.files?.reduce((s, f) => s + (f.size || 0), 0) || 0;
+        const firstFile = doc.files && doc.files.length > 0 ? doc.files[0] : null;
+                    const thumbHtml = firstFile && isValidThumbnail(firstFile.thumbnail) ? `
+                        <img src="${firstFile.thumbnail}" alt="thumb" style="width:48px;height:48px;object-fit:cover;border-radius:6px;visibility:hidden;">` :
+                        (firstFile && firstFile.type?.startsWith('image/') ? `
+                        <img id="doc-thumb-${doc.id}-0" data-docid="${doc.id}" data-fileidx="0" src="" alt="thumb" style="width:48px;height:48px;object-fit:cover;border-radius:6px;visibility:hidden;">` :
+                        `<div class="doc-icon">${type.icon}</div>`);
+
+        return `
+            <div class="doc-card" onclick="viewDocument('${doc.id}')">
+                    ${thumbHtml}
+                <div class="doc-info">
+                    <div class="doc-title">
+                        ${Utils.escapeHtml(doc.title)}
+                        ${doc.favorite ? '⭐' : ''}
+                    </div>
+                    <div class="doc-meta">
+                        ${files} file(s) • ${window.documentVault.formatFileSize(size)} • ${Utils.formatDate(doc.created)}
+                    </div>
+                </div>
+                <div class="doc-badge">${type.name}</div>
+            </div>
+        `;
+    }).join('');
+    
+    resetInactivityTimer();
+    // Reveal any inline thumbnails already present (data: / blob:)
+    revealThumbnailsIn(container);
+    // Populate missing thumbnails by decrypting image files as needed
+    populateMissingThumbnails(docs);
+}
+
+async function populateMissingThumbnails(docs) {
+    if (!docs || !window.documentVault) return;
+    for (let doc of docs) {
+        if (!doc.files) continue;
+        for (let i = 0; i < doc.files.length; i++) {
+            const f = doc.files[i];
+            if (f.type?.startsWith('image/') && !isValidThumbnail(f.thumbnail)) {
+                // Try to.populate both card thumbnail and file-list thumbnail (if present).
+                const elCard = document.getElementById(`doc-thumb-${doc.id}-${i}`);
+                const elFile = document.getElementById(`docfile-thumb-${doc.id}-${i}`);
+
+                const needsCard = elCard && (!elCard.getAttribute('src') || elCard.getAttribute('src') === '');
+                const needsFile = elFile && (!elFile.getAttribute('src') || elFile.getAttribute('src') === '');
+
+                if (!needsCard && !needsFile) continue;
+
+                try {
+                    const freshDoc = window.documentVault.documents.find(d => d.id === doc.id) || await window.documentVault.getDocument(doc.id, false);
+                    const encFile = freshDoc.files[i];
+                    if (!encFile) continue;
+                    const blob = await window.documentVault.decryptFile(encFile);
+                    const url = URL.createObjectURL(blob);
+
+                    if (needsCard) {
+                        try { elCard.onload = () => { try { elCard.style.visibility = 'visible'; } catch(e){} }; elCard.src = url; elCard.dataset.objUrl = url; } catch (e) {}
+                    }
+                    if (needsFile) {
+                        try { elFile.onload = () => { try { elFile.style.visibility = 'visible'; } catch(e){} }; elFile.src = url; elFile.dataset.objUrl = url; } catch (e) {}
+                    }
+                } catch (e) {
+                    console.warn('Thumbnail decrypt failed for', doc.id, i, e);
+                }
+            }
+        }
+    }
+}
+
+function updateDocumentStats() {
+    if (!window.documentVault) return;
+    
+    const stats = window.documentVault.getStats();
+    document.getElementById('docTotalCount').textContent = stats.total;
+    document.getElementById('docExpiringCount').textContent = stats.expiringSoon;
+    document.getElementById('docFavoritesCount').textContent = stats.favorites;
+}
+
+// Show documents that are expiring soon (clicked from stats)
+async function showExpiringDocuments() {
+    if (!window.isVaultUnlocked || !window.documentVault) {
+        showPinModal('verify');
+        return;
+    }
+
+    Utils.showToast('Loading expiring documents...', 600);
+    const expiring = await window.documentVault.checkExpiringDocuments();
+
+    const container = document.getElementById('documentsGrid');
+    // Toolbar: Total / Favorites (span full grid row)
+    const toolbarHtml = `
+        <div class="doc-view-toolbar" style="grid-column: 1 / -1;">
+            <button class="ghost" onclick="loadDocuments()">All (Total)</button>
+            <button class="ghost" onclick="showFavoritesDocuments()">Favorites</button>
+        </div>
+    `;
+
+    if (!expiring || expiring.length === 0) {
+        container.innerHTML = toolbarHtml + `
+            <div class="empty-state">
+                <div class="icon">✅</div>
+                <h3>No expiring documents</h3>
+                <p>No documents expiring in the next 30 days.</p>
+            </div>`;
+        return;
+    }
+
+    // Map to full document objects where possible
+    const docs = expiring.map(e => window.documentVault.documents.find(d => d.id === e.id)).filter(Boolean);
+
+    container.innerHTML = toolbarHtml + docs.map(doc => {
+        const type = DOCUMENT_TYPES[doc.type] || DOCUMENT_TYPES.other;
+        const files = doc.files?.length || 0;
+        const size = doc.files?.reduce((s, f) => s + (f.size || 0), 0) || 0;
+        const firstFile = doc.files && doc.files.length > 0 ? doc.files[0] : null;
+                    const thumbHtml = firstFile && isValidThumbnail(firstFile.thumbnail) ? `
+                        <img src="${firstFile.thumbnail}" alt="thumb" style="width:48px;height:48px;object-fit:cover;border-radius:6px;visibility:hidden;">` :
+                        (firstFile && firstFile.type?.startsWith('image/') ? `
+                        <img id="doc-thumb-${doc.id}-0" data-docid="${doc.id}" data-fileidx="0" src="" alt="thumb" style="width:48px;height:48px;object-fit:cover;border-radius:6px;visibility:hidden;">` :
+                        `<div class="doc-icon">${type.icon}</div>`);
+
+        return `
+            <div class="doc-card" onclick="viewDocument('${doc.id}')">
+                ${thumbHtml}
+                <div class="doc-info">
+                    <div class="doc-title">${Utils.escapeHtml(doc.title)} ${doc.favorite ? '⭐' : ''}</div>
+                    <div class="doc-meta">${files} file(s) • ${window.documentVault.formatFileSize(size)} • ${Utils.formatDate(doc.created)}</div>
+                </div>
+                <div class="doc-badge">${type.name}</div>
+            </div>`;
+    }).join('');
+
+    // Reveal inline thumbnails and populate missing ones
+    revealThumbnailsIn(container);
+    populateMissingThumbnails(docs);
+    resetInactivityTimer();
+}
+
+// Show favorite documents
+async function showFavoritesDocuments() {
+    if (!window.isVaultUnlocked || !window.documentVault) {
+        showPinModal('verify');
+        return;
+    }
+
+    Utils.showToast('Loading favorites...', 400);
+    const container = document.getElementById('documentsGrid');
+    const toolbarHtml = `
+        <div class="doc-view-toolbar" style="grid-column: 1 / -1;">
+            <button class="ghost" onclick="loadDocuments()">All (Total)</button>
+            <button class="primary" onclick="showFavoritesDocuments()">Favorites</button>
+        </div>
+    `;
+
+    const docs = (window.documentVault.documents || []).filter(d => d.favorite);
+    if (!docs || docs.length === 0) {
+        container.innerHTML = toolbarHtml + `
+            <div class="empty-state">
+                <div class="icon">⭐</div>
+                <h3>No favorites</h3>
+                <p>You haven't favorited any documents yet.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = toolbarHtml + docs.map(doc => {
+        const type = DOCUMENT_TYPES[doc.type] || DOCUMENT_TYPES.other;
+        const files = doc.files?.length || 0;
+        const size = doc.files?.reduce((s, f) => s + (f.size || 0), 0) || 0;
+        return `
+            <div class="doc-card" onclick="viewDocument('${doc.id}')">
+                <div class="doc-icon">${type.icon}</div>
+                <div class="doc-info">
+                    <div class="doc-title">${Utils.escapeHtml(doc.title)} ${doc.favorite ? '⭐' : ''}</div>
+                    <div class="doc-meta">${files} file(s) • ${window.documentVault.formatFileSize(size)} • ${Utils.formatDate(doc.created)}</div>
+                </div>
+                <div class="doc-badge">${type.name}</div>
+            </div>`;
+    }).join('');
+
+    // Reveal inline thumbnails and populate missing ones
+    revealThumbnailsIn(container);
+    populateMissingThumbnails(docs);
+    resetInactivityTimer();
+}
+
+function showDocumentModal(type = null) {
+    const modal = document.getElementById('documentModal');
+    
+    document.getElementById('documentModalTitle').textContent = type ? `Add ${DOCUMENT_TYPES[type].name}` : 'Add Document';
+    
+    const select = document.getElementById('documentType');
+    select.innerHTML = Object.entries(DOCUMENT_TYPES).map(([k, v]) => 
+        `<option value="${k}" ${k === type ? 'selected' : ''}>${v.icon} ${v.name}</option>`
+    ).join('');
+    
+    updateDocumentFields(type || 'aadhar');
+    modal.style.display = 'flex';
+    resetInactivityTimer();
+}
+
+function updateDocumentFields(type) {
+    const container = document.getElementById('documentFields');
+    const template = DOCUMENT_TYPES[type].template;
+    
+    container.innerHTML = Object.entries(template).map(([key, field]) => {
+        let input = '';
+        if (field.type === 'textarea') {
+            input = `<textarea id="doc_${key}" placeholder="${field.label}"></textarea>`;
+        } else if (field.type === 'select') {
+            input = `<select id="doc_${key}">${field.options.map(o => `<option>${o}</option>`).join('')}</select>`;
+        } else if (field.type === 'date') {
+            input = `<input type="date" id="doc_${key}">`;
+        } else {
+            input = `<input type="text" id="doc_${key}" placeholder="${field.label}" ${field.pattern ? `pattern="${field.pattern}"` : ''}>`;
+        }
+        
+        return `<div class="input-group"><label>${field.label}</label>${input}</div>`;
+    }).join('');
+    
+    resetInactivityTimer();
+}
+
+async function handleDocumentUpload() {
+    if (!window.isVaultUnlocked) {
+        showPinModal('verify');
+        return;
+    }
+    
+    const files = document.getElementById('documentFiles').files;
+    if (files.length === 0) {
+        Utils.showToast('Select files');
+        return;
+    }
+    
+    isUploading = true;
+    Utils.showToast('📤 Uploading...', 0);
+    
+    try {
+        const type = document.getElementById('documentType').value;
+        const title = document.getElementById('documentTitle').value.trim() || DOCUMENT_TYPES[type].name;
+        
+        for (let file of files) {
+            const maxSize = DOCUMENT_TYPES[type].maxSize || 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                Utils.showToast(`File too large: ${file.name}`);
+                return;
+            }
+            
+            const allowed = DOCUMENT_TYPES[type].fileTypes || ['image/*', 'application/pdf'];
+            const ok = allowed.some(t => {
+                if (t.endsWith('/*')) return file.type.startsWith(t.split('/')[0]);
+                return t === file.type;
+            });
+            
+            if (!ok) {
+                Utils.showToast(`Invalid type: ${file.name}`);
+                return;
+            }
+        }
+        
+        const metadata = {};
+        for (let key in DOCUMENT_TYPES[type].template) {
+            const input = document.getElementById(`doc_${key}`);
+            if (input?.value) metadata[key] = input.value;
+        }
+        
+        // retrieve notes value from the form if provided
+        const notes = document.getElementById('documentNotes')?.value || '';
+        
+        await window.documentVault.addDocument({
+            type, title, metadata,
+            tags: [],
+            favorite: document.getElementById('documentFavorite')?.checked || false,
+            notes: notes  // <--- FIXED! Ab notes save hoga
+        }, Array.from(files));
+        
+        closeDocumentModal();
+        loadDocuments();
+        Utils.showToast('✓ Document saved');
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        Utils.showToast('❌ Error: ' + error.message);
+    } finally {
+        isUploading = false;
+        resetInactivityTimer();
+    }
+}
+
+function closeDocumentModal() {
+    document.getElementById('documentModal').style.display = 'none';
+    document.getElementById('documentTitle').value = '';
+    document.getElementById('documentFiles').value = '';
+    document.getElementById('documentFavorite').checked = false;
+    // also reset the notes field
+    const notesField = document.getElementById('documentNotes');
+    if (notesField) notesField.value = '';
+    document.querySelectorAll('[id^="doc_"]').forEach(f => f.value = '');
+    resetInactivityTimer();
+}
+
+async function viewDocument(id) {
+    if (!window.isVaultUnlocked) {
+        showPinModal('verify');
+        return;
+    }
+    
+    try {
+        Utils.showToast('Loading...', 800);
+        
+        const doc = await window.documentVault.getDocument(id);
+        if (!doc) {
+            Utils.showToast('Not found');
+            return;
+        }
+        
+        const decrypted = {};
+        for (let [k, v] of Object.entries(doc.metadata || {})) {
+            try {
+                decrypted[k] = await window.documentVault.decryptField(v);
+            } catch {
+                decrypted[k] = '🔒 Encrypted';
+            }
+        }
+        
+        // Store current viewing doc ID for edit button
+        window.currentViewingDocId = id;
+        showDocumentViewModal(doc, decrypted);
+        
+    } catch (error) {
+        console.error('View error:', error);
+        Utils.showToast('❌ Error');
+    }
+    
+    resetInactivityTimer();
+}
+
+function showDocumentViewModal(doc, metadata) {
+    const modal = document.getElementById('documentViewModal');
+    const type = DOCUMENT_TYPES[doc.type] || DOCUMENT_TYPES.other;
+    
+    document.getElementById('viewDocumentTitle').textContent = doc.title;
+    
+    let metaHtml = Object.entries(metadata).map(([k, v]) => {
+        const label = type.template[k]?.label || k;
+        return `
+            <div class="document-field">
+                <div class="document-field-label">${label}</div>
+                <div class="document-field-value">${Utils.escapeHtml(v || '')}</div>
+            </div>
+        `;
+    }).join('');
+    
+    let filesHtml = '';
+    if (doc.files?.length) {
+        filesHtml = '<h3>Files</h3><div class="document-files">';
+        doc.files.forEach((f, i) => {
+            const isImage = f.type?.startsWith('image/');
+            const thumb = isValidThumbnail(f.thumbnail) ? `<img src="${f.thumbnail}" alt="thumb" style="width:60px;height:60px;object-fit:cover;border-radius:6px;margin-right:10px;visibility:hidden;">` : (isImage ? `<img id="docfile-thumb-${doc.id}-${i}" data-docid="${doc.id}" data-fileidx="${i}" src="" alt="thumb" style="width:60px;height:60px;object-fit:cover;border-radius:6px;margin-right:10px;visibility:hidden;">` : '');
+            const iconHtml = !isValidThumbnail(f.thumbnail) ? (isImage ? '🖼️' : '📄') : '';
+            filesHtml += `
+                <div class="document-file" onclick="previewDocumentFile('${doc.id}', ${i})" style="display:flex;align-items:center;gap:10px;">
+                    ${thumb}
+                    <div style="flex:1;">
+                        <div class="document-file-name">${f.name || 'File'}</div>
+                        <div class="document-file-size">${window.documentVault.formatFileSize(f.size || 0)}</div>
+                    </div>
+                    <div class="document-file-icon>${iconHtml}</div>
+                </div>
+            `;
+        });
+        filesHtml += '</div>';
+    }
+    
+    let expiry = '';
+    if (metadata.expiryDate) {
+        const days = Math.ceil((new Date(metadata.expiryDate) - new Date()) / 86400000);
+        if (days > 0 && days <= 30) {
+            expiry = `<div class="expiry-warning">Expires in ${days} days</div>`;
+        }
+    }
+    
+    document.getElementById('documentViewContent').innerHTML = `
+        <div class="document-view-section">
+            ${expiry}
+            <div class="document-field">
+                <div class="document-field-label">Type</div>
+                <div class="document-field-value">${type.icon} ${type.name}</div>
+            </div>
+            ${metaHtml}
+            ${doc.notes ? `
+                <div class="document-field">
+                    <div class="document-field-label">Notes</div>
+                    <div class="document-field-value">${Utils.escapeHtml(doc.notes)}</div>
+                </div>
+            ` : ''}
+            <div class="document-field">
+                <div class="document-field-label">Added</div>
+                <div class="document-field-value">${new Date(doc.created).toLocaleString()}</div>
+            </div>
+            ${filesHtml}
+        </div>
+    `;
+    
+    document.getElementById('deleteDocumentBtn').onclick = () => {
+        if (confirm('Delete this document? This action cannot be undone.')) {
+            closeDocumentViewModal();
+            setTimeout(() => deleteDocument(doc.id), 300);
+        }
+    };
+    
+    modal.style.display = 'flex';
+    // Reveal thumbnails rendered from stored thumbnail data, then populate any missing ones
+    revealThumbnailsIn(document.getElementById('documentViewContent'));
+    populateMissingThumbnails([doc]);
+    resetInactivityTimer();
+}
+
+function closeDocumentViewModal() {
+    // Revoke any object URLs created for thumbnails in the document view
+    const content = document.getElementById('documentViewContent');
+    if (content) {
+        const imgs = content.querySelectorAll('img[data-docid], img[id^="docfile-thumb-"]');
+        imgs.forEach(img => {
+            try {
+                const url = img.dataset.objUrl || img.src;
+                if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
+            } catch (e) {}
+            try { img.src = ''; } catch (e) {}
+        });
+    }
+
+    document.getElementById('documentViewModal').style.display = 'none';
+    resetInactivityTimer();
+}
+
+function closeEditDocumentModal() {
+    document.getElementById('documentEditModal').style.display = 'none';
+    resetInactivityTimer();
+}
+
+async function editDocument(docId) {
+    if (!window.isVaultUnlocked || !window.documentVault) {
+        showPinModal('verify');
+        return;
+    }
+
+    try {
+        const doc = await window.documentVault.getDocument(docId, false);
+        if (!doc) {
+            Utils.showToast('Document not found');
+            return;
+        }
+
+        // Decrypt metadata for editing
+        const decryptedMeta = {};
+        for (let [k, v] of Object.entries(doc.metadata || {})) {
+            try {
+                decryptedMeta[k] = await window.documentVault.decryptField(v);
+            } catch (e) {
+                decryptedMeta[k] = '';
+            }
+        }
+
+        // Store current doc in window for saving later
+        window.currentEditingDoc = { doc, decryptedMeta };
+
+        // Populate edit form
+        document.getElementById('editDocumentTitle').value = doc.title || '';
+        document.getElementById('editDocumentNotes').value = doc.notes || '';
+
+        // Show current files with delete option
+        const filesList = document.getElementById('editDocumentFilesList');
+        if (doc.files && doc.files.length > 0) {
+            filesList.innerHTML = doc.files.map((f, i) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
+                    <div>
+                        <div style="font-weight:500;">${Utils.escapeHtml(f.name || 'File')}</div>
+                        <div style="font-size:0.85rem; color:#666;">${window.documentVault.formatFileSize(f.size || 0)}</div>
+                    </div>
+                    <button onclick="deleteFileFromEdit(${i})" style="background:#f56565; padding:5px 10px; border:none; border-radius:4px; color:white; cursor:pointer; font-size:0.9rem;">Remove</button>
+                </div>
+            `).join('');
+        } else {
+            filesList.innerHTML = '<div style="color:#999;">No files attached</div>';
+        }
+
+        document.getElementById('editDocumentNewFiles').value = '';
+        document.getElementById('documentEditModal').style.display = 'flex';
+        resetInactivityTimer();
+    } catch (error) {
+        console.error('Edit error:', error);
+        Utils.showToast('❌ Error loading document');
+    }
+}
+
+function deleteFileFromEdit(index) {
+    if (!window.currentEditingDoc) return;
+    
+    const doc = window.currentEditingDoc.doc;
+    if (doc.files && doc.files[index]) {
+        doc.files.splice(index, 1);
+        
+        // Re-render files list
+        const filesList = document.getElementById('editDocumentFilesList');
+        if (doc.files.length > 0) {
+            filesList.innerHTML = doc.files.map((f, i) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
+                    <div>
+                        <div style="font-weight:500;">${Utils.escapeHtml(f.name || 'File')}</div>
+                        <div style="font-size:0.85rem; color:#666;">${window.documentVault.formatFileSize(f.size || 0)}</div>
+                    </div>
+                    <button onclick="deleteFileFromEdit(${i})" style="background:#f56565; padding:5px 10px; border:none; border-radius:4px; color:white; cursor:pointer; font-size:0.9rem;">Remove</button>
+                </div>
+            `).join('');
+        } else {
+            filesList.innerHTML = '<div style="color:#999;">No files attached</div>';
+        }
+        Utils.showToast('📎 File removed');
+    }
+}
+
+async function saveEditDocument() {
+    if (!window.isVaultUnlocked || !window.documentVault || !window.currentEditingDoc) {
+        showPinModal('verify');
+        return;
+    }
+
+    isUploading = true;
+    try {
+        Utils.showToast('Saving changes...', 2000);
+        const { doc, decryptedMeta } = window.currentEditingDoc;
+
+        // Update title and notes
+        doc.title = document.getElementById('editDocumentTitle').value.trim() || 'Untitled';
+        doc.notes = document.getElementById('editDocumentNotes').value || '';
+        doc.updated = new Date().toISOString();
+
+        // Handle new files
+        const newFiles = document.getElementById('editDocumentNewFiles').files;
+        if (newFiles && newFiles.length > 0) {
+            for (let file of newFiles) {
+                const maxSize = DOCUMENT_TYPES[doc.type]?.maxSize || 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    Utils.showToast(`File too large: ${file.name}`);
+                    return;
+                }
+
+                try {
+                    const encrypted = await window.documentVault.encryptFile(file);
+                    doc.files.push(encrypted);
+                } catch (e) {
+                    console.warn('Failed to encrypt new file', file.name, e);
+                    Utils.showToast(`Failed to encrypt: ${file.name}`);
+                }
+            }
+        }
+
+        // Save updated document
+        await window.documentVault.saveDocument(doc);
+        closeEditDocumentModal();
+        closeDocumentViewModal();
+        await loadDocuments();
+        Utils.showToast('Document updated');
+    } catch (error) {
+        console.error('Save error:', error);
+        Utils.showToast('❌ Save failed: ' + error.message);
+    } finally {
+        isUploading = false;
+        window.currentEditingDoc = null;
+        resetInactivityTimer();
+    }
+}
+
+async function downloadDocumentFile(docId, index) {
+    if (!window.isVaultUnlocked) {
+        showPinModal('verify');
+        return;
+    }
+
+    // If we have a current preview for this file, use it to download without re-decrypting
+    if (window.currentPreview && window.currentPreview.docId === docId && window.currentPreview.index === index) {
+        try {
+            const { blob, filename } = window.currentPreview;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'file';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            Utils.showToast('✓ Downloaded');
+        } catch (e) {
+            console.error('Download preview error:', e);
+            Utils.showToast('❌ Download failed');
+        }
+        resetInactivityTimer();
+        return;
+    }
+
+    isUploading = true;
+
+    try {
+        Utils.showToast('Preparing file...', 1500);
+
+        const doc = await window.documentVault.getDocument(docId, false);
+        if (!doc?.files?.[index]) {
+            Utils.showToast('File not found');
+            return;
+        }
+
+        const blob = await window.documentVault.decryptFile(doc.files[index]);
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.files[index].name || 'file';
+        a.click();
+
+        URL.revokeObjectURL(url);
+        Utils.showToast('Downloaded');
+
+    } catch (error) {
+        console.error('Download error:', error);
+        Utils.showToast('Download failed');
+    } finally {
+        isUploading = false;
+        resetInactivityTimer();
+    }
+}
+
+async function deleteDocument(id) {
+    try {
+        await window.documentVault.deleteDocument(id);
+        await loadDocuments();
+        Utils.showToast('Deleted');
+    } catch (error) {
+        console.error('Delete error:', error);
+        Utils.showToast('Delete failed');
+    }
+    resetInactivityTimer();
+}
+
+function searchDocuments() {
+    loadDocuments();
+    resetInactivityTimer();
+}
+
+function filterDocuments() {
+    loadDocuments();
+    resetInactivityTimer();
+}
+
+// export
+window.loadDocuments = loadDocuments;
+window.showExpiringDocuments = showExpiringDocuments;
+window.showFavoritesDocuments = showFavoritesDocuments;
+window.showDocumentModal = showDocumentModal;
+window.updateDocumentFields = updateDocumentFields;
+window.handleDocumentUpload = handleDocumentUpload;
+window.closeDocumentModal = closeDocumentModal;
+window.viewDocument = viewDocument;
+window.closeDocumentViewModal = closeDocumentViewModal;
+window.closeEditDocumentModal = closeEditDocumentModal;
+window.editDocument = editDocument;
+window.deleteFileFromEdit = deleteFileFromEdit;
+window.saveEditDocument = saveEditDocument;
+window.downloadDocumentFile = downloadDocumentFile;
+window.deleteDocument = deleteDocument;
+window.searchDocuments = searchDocuments;
+window.filterDocuments = filterDocuments;
