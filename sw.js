@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'mempass-v2.3';
+const CACHE_NAME = 'mempass-v2.1';
 const urlsToCache = [
     '/mempass/',
     '/mempass/index.html',
@@ -29,3 +29,4 @@ self.addEventListener('fetch', event => {
             .then(response => response || fetch(event.request))
     );
 });
+
