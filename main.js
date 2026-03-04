@@ -5,7 +5,7 @@ window.isVaultUnlocked = false;
 window.autoLockTimer = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 MemPass v2.3 starting...');
+    console.log('🚀 MemPass v2.1 starting...');
     
     // Disable browser autofill on sensitive inputs
     const sensitiveInputs = ['masterPhrase', 'serviceName', 'pin1', 'pin2', 'pin3', 'pin4', 'pin5', 'pin6'];
