@@ -802,10 +802,10 @@
                 // ===== REGRESSION SUITE - FIXED =====
                 regression: [
                     // FIX #9: Export/import - Fixed with proper prompting
-                    { name: 'Export/import preserves data (encrypted)', async function() { 
+                    { name: 'Export/import preserves data', async function() { 
                         this.timeout = 15000;
                         
-                        // Mock prompt to return encryption password
+                        // Mock prompt
                         const originalPrompt = window.prompt;
                         window.prompt = (message) => {
                             if (message.includes('password')) return 'testpassword123';
@@ -838,33 +838,6 @@
                             }
                         } finally {
                             window.prompt = originalPrompt;
-                        }
-                    }},
-                    { name: 'Export/import preserves data (plain)', async function() {
-                        this.timeout = 15000;
-
-                        const vault1 = new PasswordVault();
-                        await vault1.setPin('123456');
-                        await vault1.addPassword('example', 'user2', 'pwd456');
-
-                        const exportData = await vault1.exportData();
-
-                        // exported should not contain encrypted flag since no prompt password
-                        if (exportData.encrypted) {
-                            throw new Error('Expected plain export, got encrypted');
-                        }
-
-                        const vault3 = new PasswordVault();
-                        await vault3.setPin('123456');
-                        await vault3.importData(exportData);
-
-                        if (vault3.passwords.length !== 1) {
-                            throw new Error(`Plain import failed - wrong count: ${vault3.passwords.length}`);
-                        }
-                        const pwd = vault3.passwords[0];
-                        const decrypted = vault3.getDecryptedPassword(pwd);
-                        if (decrypted !== 'pwd456') {
-                            throw new Error(`Plain import password mismatch: ${decrypted}`);
                         }
                     }},
                     

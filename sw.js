@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'mempass-v2.3';
+const CACHE_NAME = 'mempass-v2.1';
 const urlsToCache = [
     '/mempass/',
     '/mempass/index.html',
@@ -10,16 +10,7 @@ const urlsToCache = [
     '/mempass/password-generator.js',
     '/mempass/vault.js',
     '/mempass/document-vault.js',
-    '/mempass/drive-sync.js',
-    '/mempass/ui/globals.js',
-    '/mempass/ui/pin.js',
-    '/mempass/ui/vault-ui.js',
-    '/mempass/ui/password.js',
-    '/mempass/ui/passwordVaultDisplay.js',
-    '/mempass/ui/documents.js',
-    '/mempass/ui/preview.js',
-    '/mempass/ui/exportImport.js',
-    '/mempass/ui/misc.js',
+    '/mempass/ui-handlers.js',
     '/mempass/main.js',
     'https://cdnjs.cloudflare.com/ajax/libs/argon2-browser/1.18.0/argon2-bundled.min.js',
     'https://unpkg.com/dexie@3.2.3/dist/dexie.js'
@@ -38,3 +29,4 @@ self.addEventListener('fetch', event => {
             .then(response => response || fetch(event.request))
     );
 });
+

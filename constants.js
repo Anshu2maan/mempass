@@ -17,9 +17,9 @@ const STORAGE_KEYS = {
     documents: 'mempass_documents_v1',
     pinAttempts: 'mempass_pin_attempts',
     pinLockUntil: 'mempass_pin_lock_until',
-    lastExport: 'mempass_last_export',
-    driveConfig: 'mempass_drive_config_v1' 
+    lastExport: 'mempass_last_export'
 };
+
 const PIN_LENGTH = 6;
 const AUTO_LOCK_TIME = 5 * 60 * 1000; // 5 minutes
 const INACTIVITY_LOCK_TIME = 90000; // 90 seconds

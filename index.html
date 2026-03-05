@@ -5,25 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-<!-- Content Security Policy - UPDATED for GitHub Pages -->
-<meta http-equiv="Content-Security-Policy" content="
+    <!-- Content Security Policy - SIMPLIFIED -->
+  <meta http-equiv="Content-Security-Policy" content="
     default-src 'self' blob: data:;
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' 
-        https://cdn.jsdelivr.net 
-        https://unpkg.com 
-        https://accounts.google.com
-        https://anshu2maan.github.io;
-    style-src 'self' 'unsafe-inline' 
-        https://fonts.googleapis.com;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     img-src 'self' data: blob: https:;
-    connect-src 'self' 
-        https://unpkg.com 
-        https://cdn.jsdelivr.net 
-        https://accounts.google.com 
-        https://www.googleapis.com
-        https://anshu2maan.github.io;
-    font-src 'self' data: 
-        https://fonts.gstatic.com;
+    connect-src 'self' https://unpkg.com https://cdn.jsdelivr.net;
+    font-src 'self' data: https://fonts.gstatic.com;
     worker-src 'self' blob:;
     frame-src 'self' blob: data:;
     child-src 'self' blob: data:;
@@ -40,7 +29,6 @@
     <link rel="stylesheet" href="style.css">
     
     <!-- Third Party Libraries - CORRECT VERSIONS -->
-     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
     <script src="https://unpkg.com/dexie@3.2.3/dist/dexie.js"></script>
 </head>
@@ -175,16 +163,7 @@
                         <button id="importVaultBtn" style="background:#48bb78; flex:1;">📥 Import Vault</button>
                     </div>
                 </div>
-                <!-- Google Drive Sync -->
-<div style="margin-top:15px; padding:12px; background:var(--blur-bg); border-radius:12px; border:1px solid var(--card-border);">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <strong>☁️ Google Drive Auto Backup</strong><br>
-            <small id="driveStatus" style="color:#48bb78;">Disabled</small>
-        </div>
-        <button id="driveSyncBtn" style="padding:8px 16px; font-size:0.95rem;">Enable Backup</button>
-    </div>
-</div>
+
                 <!-- Documents Vault Content -->
                 <div id="documentsVaultContent" style="display:none;">
                     <div class="documents-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -302,7 +281,7 @@
     </label>
 </div>
 
-<!-- Optional notes field for additional context -->
+<!-- 📝 NOTES FIELD - YEH AADHA CODE HAI -->
 <div class="input-group">
     <label for="documentNotes">📝 Notes (Optional)</label>
     <textarea id="documentNotes" 
@@ -394,19 +373,6 @@
             </div>
         </div>
 
-<!-- Google Drive Auto Backup Section -->
-<div id="driveBackupSection" style="display:none; margin: 20px 0; padding: 16px; background: var(--blur-bg); border-radius: 12px; border: 1px solid var(--card-border);">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <div>
-            <strong>☁️ Google Drive Auto Backup</strong><br>
-            <small id="driveStatus" style="color: #718096;">Loading...</small>
-        </div>
-        <button id="driveSyncBtn" class="btn primary" style="padding: 10px 20px; font-size: 0.95rem; min-width: 140px;">
-            Enable Backup
-        </button>
-    </div>
-</div>
-
         <!-- Footer with Features -->
         <footer>
             <div class="features">
@@ -426,11 +392,11 @@
                     <p>Store encrypted documents & files</p>
                 </div>
             </div>
-            <p style="margin-top:20px;">🔐 MemPass v2.3 - Your Offline Password Manager</p>
+            <p style="margin-top:20px;">🔐 MemPass v2.1 - Your Offline Password Manager</p>
         </footer>
     </div>
 
- <!-- ==================== SCRIPTS ==================== -->
+    <!-- ==================== SCRIPTS ==================== -->
     
     <!-- Core Files -->
     <script src="constants.js"></script>
@@ -442,17 +408,8 @@
     <script src="vault.js"></script>
     <script src="document-vault.js"></script>
     
-    <!-- UI Handlers split across multiple files -->
-    <script src="drive-sync.js"></script>
-    <script src="ui/globals.js"></script>
-    <script src="ui/pin.js"></script>
-    <script src="ui/vault-ui.js"></script>
-    <script src="ui/password.js"></script>
-    <script src="ui/passwordVaultDisplay.js"></script>
-    <script src="ui/documents"></script>
-    <script src="ui/preview.js"></script>
-    <script src="ui/exportImport.js"></script>
-    <script src="ui/misc.js"></script>
+    <!-- UI Handlers -->
+    <script src="ui-handlers.js"></script>
     <!-- Onboarding -->
     <script src="onboarding.js"></script>
     

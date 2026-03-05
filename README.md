@@ -87,11 +87,6 @@ Just as you wouldn't leave your locker keys with anyone else, MemPass ensures yo
 
 ## ✨ **Core Features**
 
-### ☁️ **Google Drive Auto Backup**
-- Optional end‑to‑end encrypted backup stored in your own Google Drive account.
-- Requires obtaining a Google OAuth client ID and placing it in `drive-sync.js`.
-- Automatically syncs after changes (passwords/documents) and can restore new cloud backups on launch.
-
 ### 🔐 **Security First**
 | Feature | Details |
 |---------|---------|
@@ -101,13 +96,6 @@ Just as you wouldn't leave your locker keys with anyone else, MemPass ensures yo
 | **Auto-Lock** | Locks automatically after 5 minutes of inactivity |
 | **Attempt Limiting** | 5 wrong tries = 10 minute lockout (survives browser restart) |
 | **Zero Network** | No internet requests = complete privacy, no tracking |
-
-> **Note for developers:** the Google Drive backup feature requires you to
-> enable the **Google Drive API** for your Cloud project and register every
-> origin used to open the app (e.g. `http://127.0.0.1:5500`,
-> `http://localhost:5500`, or your production domain) as an *Authorized
-> JavaScript origin* on the OAuth client.  Missing either will produce
-> 403 "insufficientPermissions" or "redirect_uri_mismatch" errors.
 
 ### 📁 **Document Vault**
 | Feature | Details |
@@ -388,16 +376,7 @@ mempass/
 ├── password-generator.js   # Deterministic password generation
 ├── vault.js                # Password vault core
 ├── document-vault.js       # Document vault core
-├── ui/                     # UI interaction modules (split for readability)
-├── ui/globals.js           # shared state variables
-├── ui/pin.js               # PIN modal & verification logic
-├── ui/vault-ui.js          # lock/unlock and timer handlers
-├── ui/password.js          # password generation/actions
-├── ui/passwordVaultDisplay.js # display & manage saved passwords
-├── ui/documents.js         # document vault UI logic
-├── ui/preview.js           # file preview helpers
-├── ui/exportImport.js      # export/import utilities
-├── ui/misc.js              # assorted helpers
+├── ui-handlers.js          # All UI interactions
 ├── onboarding.js           # Interactive tour
 └── main.js                 # Initialization
 ```
@@ -1056,7 +1035,7 @@ If MemPass helps even one person secure their digital life — it's worth it.
 
 | Version | Release Date | Status |
 |---------|--------------|--------|
-| 2.3 | March 2025 | Current Stable |
+| 2.1 | March 2025 | Current Stable |
 
 ### Stats
 - 📦 150KB total size

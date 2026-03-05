@@ -1,12 +1,5 @@
-// document-vault.js - document storage logic
-// Provides encrypted storage of documents and metadata in IndexedDB.
+// document-vault.js - Final version with all fixes
 
-/**
- * DocumentVault manages user documents (IDs, certificates, etc.) with
- * fields encrypted with the same key as the password vault.  Each document
- * may contain metadata, notes, and multiple encrypted files.  The class
- * exposes methods for searching, adding, and updating entries.
- */
 class DocumentVault {
     constructor(cryptoUtils, passwordVault) {
         console.log('📁 DocumentVault constructor called');
@@ -24,7 +17,7 @@ class DocumentVault {
             this.db.version(2).stores({
     documents: 'id, type, title, created, updated, favorite, *tags'
 }).upgrade(tx => {
-    // during upgrade, ensure existing documents have tags array
+    // Purane documents mein tags field add karo
     return tx.documents.toCollection().modify(doc => {
         doc.tags = doc.tags || [];
     });
@@ -51,43 +44,29 @@ class DocumentVault {
         }
     }
 
-  async saveDocument(document) {
-    if (!this.db) throw new Error('Database not initialized');
-    try {
-        await this.db.documents.put(document);
-        await this.loadDocuments();
-
-        // Trigger Google Drive auto-sync (debounced upload after 8 seconds)
-        if (window.googleDriveSync?.enabled) {
-            window.googleDriveSync.queueSync?.();
+    async saveDocument(document) {
+        if (!this.db) throw new Error('Database not initialized');
+        try {
+            await this.db.documents.put(document);
+            await this.loadDocuments();
+            return true;
+        } catch (error) {
+            console.error('Error saving document:', error);
+            throw error;
         }
-
-        return true;
-    } catch (error) {
-        console.error('Error saving document:', error);
-        throw error;
     }
-}
 
     async deleteDocument(id) {
         if (!this.db) throw new Error('Database not initialized');
         try {
             await this.db.documents.delete(id);
             await this.loadDocuments();
-
-            // Trigger Google Drive auto-sync (debounced upload after 8 seconds)
-        if (window.googleDriveSync?.enabled) {
-            window.googleDriveSync.queueSync?.();
-        }
-
             return true;
         } catch (error) {
             console.error('Error deleting document:', error);
             throw error;
         }
     }
-
-if (window.googleDriveSync?.enabled) window.googleDriveSync.queueSync();
 
     async getDocument(id, incrementAccess = true) {
         if (!this.db) return null;
@@ -176,7 +155,7 @@ if (window.googleDriveSync?.enabled) window.googleDriveSync.queueSync();
                 
                 const iv = crypto.getRandomValues(new Uint8Array(12));
                 
-                // PDF-specific handling (large files may need alternate approach)
+                // PDF ke liye specific handling
                 let ciphertext;
                 try {
                     ciphertext = await window.crypto.subtle.encrypt(
@@ -267,13 +246,6 @@ if (window.googleDriveSync?.enabled) window.googleDriveSync.queueSync();
         });
     }
 
-    /**
-     * Add a new document record with associated files.  Metadata fields and
-     * any attached files are encrypted with the vault key.
-     * @param {Object} documentData - {type, title, metadata, tags, favorite, notes}
-     * @param {File[]} files - Array of File objects to encrypt/store
-     * @returns {Object} document object that was stored
-     */
     async addDocument(documentData, files) {
         const hasKey = await this._ensureKey();
         if (!hasKey) throw new Error('Vault must be unlocked');
@@ -320,12 +292,6 @@ if (window.googleDriveSync?.enabled) window.googleDriveSync.queueSync();
         return document;
     }
 
-    /**
-     * Perform a simple text search over title, type, notes and tags
-     * (case-insensitive). Returns in-memory results if query empty.
-     * @param {string} query - search string entered by user
-     * @returns {Promise<Array>} matching document entries
-     */
     async searchDocuments(query) {
         if (!query || query.trim() === '') return this.documents;
         if (!this.db) return [];
